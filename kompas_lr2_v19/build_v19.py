@@ -1,0 +1,326 @@
+"""Лабораторная работа №2, вариант 19 — чертёж фланцевой втулки.
+
+Генерирует DXF (AutoCAD 2010), который открывается в КОМПАС-3D через
+«Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А3 (альбомный).
+
+Запуск:  python build_v19.py   (нужен пакет ezdxf)
+"""
+import math
+import sys
+
+import ezdxf
+from ezdxf.enums import TextEntityAlignment
+
+OUT = sys.argv[1] if len(sys.argv) > 1 else "LR2_variant19.dxf"
+
+doc = ezdxf.new("R2010", setup=True)
+doc.header["$INSUNITS"] = 4  # мм
+doc.header["$LWDISPLAY"] = 1
+msp = doc.modelspace()
+
+# ---------------------------------------------------------------- стили
+doc.styles.new("GOST", dxfattribs={"font": "GOST type A.ttf", "width": 0.8, "oblique": 15})
+doc.linetypes.add("AXIS", pattern=[25.0, 20.0, -3.0, 2.0, -3.0], description="Осевая __ . __")
+doc.linetypes.add("HID", pattern=[6.0, 4.0, -2.0], description="Штриховая -- -- --")
+
+LAYERS = {
+    "Основная": dict(color=7, lineweight=50, linetype="Continuous"),
+    "Тонкая": dict(color=7, lineweight=25, linetype="Continuous"),
+    "Осевая": dict(color=1, lineweight=25, linetype="AXIS"),
+    "Штриховая": dict(color=5, lineweight=25, linetype="HID"),
+    "Штриховка": dict(color=8, lineweight=25, linetype="Continuous"),
+    "Размеры": dict(color=3, lineweight=25, linetype="Continuous"),
+    "Обозначения": dict(color=3, lineweight=25, linetype="Continuous"),
+    "Рамка": dict(color=7, lineweight=50, linetype="Continuous"),
+    "Рамка_тонкая": dict(color=7, lineweight=25, linetype="Continuous"),
+}
+for name, a in LAYERS.items():
+    doc.layers.add(name, color=a["color"], linetype=a["linetype"]).dxf.lineweight = a["lineweight"]
+
+ds = doc.dimstyles.new("ГОСТ")
+ds.dxf.dimtxsty = "GOST"
+ds.dxf.dimtxt = 3.5
+ds.dxf.dimasz = 3.0
+ds.dxf.dimexe = 2.0
+ds.dxf.dimexo = 0.0
+ds.dxf.dimgap = 1.0
+ds.dxf.dimtad = 1
+ds.dxf.dimtih = 0
+ds.dxf.dimtoh = 0
+ds.dxf.dimdec = 1
+ds.dxf.dimzin = 8
+ds.dxf.dimdsep = ord(",")
+ds.dxf.dimlwd = 25
+ds.dxf.dimlwe = 25
+ds.dxf.dimclrd = 3
+ds.dxf.dimclre = 3
+ds.dxf.dimclrt = 3
+ds.dxf.dimtmove = 0
+ds.dxf.dimatfit = 3
+
+DIA = "%%c"
+SQ = "□"
+
+
+# ---------------------------------------------------------------- помощники
+def mk(ox, oy):
+    """Функции рисования в локальной системе вида с началом (ox, oy)."""
+
+    def P(x, y):
+        return (ox + x, oy + y)
+
+    def line(x1, y1, x2, y2, layer="Основная"):
+        msp.add_line(P(x1, y1), P(x2, y2), dxfattribs={"layer": layer})
+
+    def poly(pts, layer="Основная", closed=False):
+        msp.add_lwpolyline([P(*p) for p in pts], close=closed, dxfattribs={"layer": layer})
+
+    def circle(x, y, r, layer="Основная"):
+        msp.add_circle(P(x, y), r, dxfattribs={"layer": layer})
+
+    def arc(x, y, r, a1, a2, layer="Основная"):
+        msp.add_arc(P(x, y), r, a1, a2, dxfattribs={"layer": layer})
+
+    def hatch(pts, angle=45, spacing=2.0):
+        h = msp.add_hatch(dxfattribs={"layer": "Штриховка"})
+        h.set_pattern_fill("ANSI31", scale=spacing / 3.175, angle=angle - 45)
+        h.paths.add_polyline_path([P(*p) for p in pts], is_closed=True)
+
+    def dim_lin(p1, p2, base, angle=0, text="<>"):
+        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=angle,
+                               text=text, dimstyle="ГОСТ", dxfattribs={"layer": "Размеры"})
+        d.render()
+
+    def dim_dia(cx, cy, r, ang, text="<>", loc=None):
+        kw = {"location": P(*loc)} if loc else {"angle": ang}
+        d = msp.add_diameter_dim(center=P(cx, cy), radius=r, text=text, **kw,
+                                 dimstyle="ГОСТ", override={"dimtmove": 1},
+                                 dxfattribs={"layer": "Размеры"})
+        d.render()
+
+    def dim_rad(cx, cy, r, ang, text="<>"):
+        d = msp.add_radius_dim(center=P(cx, cy), radius=r, angle=ang, text=text,
+                               dimstyle="ГОСТ", override={"dimtmove": 1},
+                               dxfattribs={"layer": "Размеры"})
+        d.render()
+
+    def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0):
+        t = msp.add_text(s, height=h, rotation=rot,
+                         dxfattribs={"layer": layer, "style": "GOST"})
+        t.set_placement(P(x, y), align=align)
+
+    return P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text
+
+
+# ================================================================ ГЕОМЕТРИЯ ДЕТАЛИ
+# Размеры по заданию (вариант 19)
+L = 60.0          # общая длина
+R_OUT = 30.0      # Ø60
+CH_OUT = 2.5      # фаска 2,5×45°
+T_FL = 12.0       # толщина фланца-проушин
+LUG_C = 40.0      # межосевое 80 / 2
+LUG_R = 6.0       # R6, ширина проушины 12
+R_LUG_HOLE = 5.0  # Ø10, 2 отв.
+SQ_H = 17.5       # квадрат 35 / 2
+SQ_DEPTH = 30.0
+SQ_R = 4.0        # R4
+R_GROOVE = 11.0   # Ø22
+GROOVE_W = 7.0
+R_BORE = 7.0      # Ø14
+SLOT_H = 4.0      # паз 8 / 2
+SLOT_D = 10.0     # глубина паза
+M12_Y = 18.0      # ось резьбовых отверстий (2 отв.)
+M12_R = 6.0
+M12_RMIN = 5.1    # внутренний диаметр резьбы ≈ Ø10,2
+M12_THR = 12.0    # длина резьбы
+M12_DRILL = 15.0  # глубина сверления
+M12_CH = 2.0      # фаска 2×45°
+CONE = M12_RMIN / math.tan(math.radians(59))  # конец сверла 118°
+
+X_GROOVE = L - SQ_DEPTH - GROOVE_W  # 23
+X_SQ = L - SQ_DEPTH                 # 30
+X_SLOT = L - SLOT_D                 # 50
+LUG_TOP = LUG_C + LUG_R             # 46
+
+# ================================================================ ГЛАВНЫЙ ВИД
+# (соединение половины вида и половины фронтального разреза)
+MX, MY = 205.0, 165.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY)
+
+# --- верхняя половина: вид
+poly([(0, 0), (0, LUG_TOP), (T_FL, LUG_TOP), (T_FL, R_OUT),
+      (L - CH_OUT, R_OUT), (L, R_OUT - CH_OUT), (L, SLOT_H), (X_SLOT, SLOT_H), (X_SLOT, 0)])
+line(L - CH_OUT, SLOT_H, L - CH_OUT, R_OUT)            # кромка фаски
+# --- нижняя половина: разрез
+lower_outer = [(0, -R_BORE), (0, -(M12_Y - M12_R - M12_CH))]
+poly(lower_outer)
+poly([(0, -(M12_Y + M12_R + M12_CH)), (0, -(LUG_C - R_LUG_HOLE))])
+poly([(0, -(LUG_C + R_LUG_HOLE)), (0, -LUG_TOP), (T_FL, -LUG_TOP), (T_FL, -R_OUT),
+      (L - CH_OUT, -R_OUT), (L, -(R_OUT - CH_OUT)), (L, -SQ_H)])
+line(L - CH_OUT, -R_OUT, L - CH_OUT, -SQ_H)            # кромка фаски
+# внутренний контур: Ø14 → канавка Ø22 → квадрат 35
+poly([(0, -R_BORE), (X_GROOVE, -R_BORE), (X_GROOVE, -R_GROOVE), (X_SQ, -R_GROOVE),
+      (X_SQ, -SQ_H), (L, -SQ_H)])
+# линии видимого контура за секущей плоскостью
+line(X_GROOVE, -R_BORE, X_GROOVE, 0)
+line(X_SQ, -R_GROOVE, X_SQ, 0)
+line(L, -SQ_H, L, -SLOT_H)
+line(X_SLOT, -SLOT_H, L, -SLOT_H)
+line(X_SLOT, -SLOT_H, X_SLOT, 0)
+# обозначение плоской грани квадратного отверстия (диагонали)
+line(X_SQ, 0, L, -SQ_H, "Тонкая")
+line(X_SQ, -SQ_H, L, 0, "Тонкая")
+# отверстие под болт Ø10 в проушине (в разрезе)
+line(0, -(LUG_C - R_LUG_HOLE), T_FL, -(LUG_C - R_LUG_HOLE))
+line(0, -(LUG_C + R_LUG_HOLE), T_FL, -(LUG_C + R_LUG_HOLE))
+# резьбовое отверстие M12 (в разрезе)
+yc = -M12_Y
+line(0, yc + M12_R + M12_CH, M12_CH, yc + M12_R)       # фаска
+line(0, yc - M12_R - M12_CH, M12_CH, yc - M12_R)
+line(M12_CH, yc + M12_R, M12_CH, yc - M12_R)
+line(M12_CH, yc + M12_RMIN, M12_DRILL, yc + M12_RMIN)   # внутр. Ø резьбы
+line(M12_CH, yc - M12_RMIN, M12_DRILL, yc - M12_RMIN)
+line(M12_DRILL, yc + M12_RMIN, M12_DRILL + CONE, yc)    # конус сверла
+line(M12_DRILL, yc - M12_RMIN, M12_DRILL + CONE, yc)
+line(M12_CH, yc + M12_R, M12_THR, yc + M12_R, "Тонкая")  # наружн. Ø резьбы
+line(M12_CH, yc - M12_R, M12_THR, yc - M12_R, "Тонкая")
+line(M12_THR, yc + M12_R, M12_THR, yc - M12_R)          # граница резьбы
+# штриховка
+hatch([(0, -R_BORE), (X_GROOVE, -R_BORE), (X_GROOVE, -R_GROOVE), (X_SQ, -R_GROOVE),
+       (X_SQ, -SQ_H), (L, -SQ_H), (L, -(R_OUT - CH_OUT)), (L - CH_OUT, -R_OUT),
+       (T_FL, -R_OUT), (T_FL, -(LUG_C - R_LUG_HOLE)), (0, -(LUG_C - R_LUG_HOLE)),
+       (0, yc - M12_R - M12_CH), (M12_CH, yc - M12_R), (M12_CH, yc - M12_RMIN),
+       (M12_DRILL, yc - M12_RMIN), (M12_DRILL + CONE, yc), (M12_DRILL, yc + M12_RMIN),
+       (M12_CH, yc + M12_RMIN), (M12_CH, yc + M12_R), (0, yc + M12_R + M12_CH)])
+hatch([(0, -(LUG_C + R_LUG_HOLE)), (T_FL, -(LUG_C + R_LUG_HOLE)),
+       (T_FL, -LUG_TOP), (0, -LUG_TOP)])
+# осевые линии
+line(-5, 0, L + 6, 0, "Осевая")
+line(-3, -LUG_C, T_FL + 3, -LUG_C, "Осевая")
+line(-3, LUG_C, T_FL + 3, LUG_C, "Осевая")
+line(-3, yc, M12_DRILL + CONE + 3, yc, "Осевая")
+
+# --- размеры главного вида
+dim_lin((0, LUG_TOP), (T_FL, LUG_TOP), (0, LUG_TOP + 8))                 # 12
+dim_lin((0, -R_BORE), (M12_DRILL, yc + M12_RMIN), (0, 22))               # 15 глубина сверления
+dim_lin((0, -R_BORE), (M12_THR, yc + M12_R), (0, 15))                    # 12 длина резьбы
+dim_lin((0, -LUG_TOP), (L, -SQ_H), (0, -LUG_TOP - 18))                   # 60
+dim_lin((X_GROOVE, -R_GROOVE), (X_SQ, -R_GROOVE), (0, -LUG_TOP - 9))     # 7
+dim_lin((X_SQ, -SQ_H), (L, -SQ_H), (0, -LUG_TOP - 9))                    # 30
+dim_lin((0, -LUG_TOP), (M12_CH, yc - M12_R), (-14, -LUG_TOP - 9),
+        text="2×45°")                                           # фаска 2×45°
+dim_lin((L - CH_OUT, R_OUT), (L, R_OUT - CH_OUT), (0, R_OUT + 10),
+        text="2,5×45°")                                         # фаска 2,5×45°
+dim_lin((L, SLOT_H), (L, -SLOT_H), (L + 10, 0), angle=90)                # 8
+dim_lin((L - CH_OUT, R_OUT), (L - CH_OUT, -R_OUT), (L + 20, 0), angle=90,
+        text=DIA + "60")                                                  # Ø60
+dim_lin((0, yc + M12_R), (0, yc - M12_R), (-10, 0), angle=90, text="M12")
+text(-17, yc - 4, "2 отв.", rot=90, align=TextEntityAlignment.MIDDLE_CENTER)
+
+# ================================================================ ВИД СПРАВА
+# по ГОСТ 2.305 располагается слева от главного вида
+SX, SY = 95.0, 165.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY)
+
+circle(0, 0, R_OUT)
+# фаска Ø55 — прервана пазом
+a_ch = math.degrees(math.asin(SLOT_H / (R_OUT - CH_OUT)))
+arc(0, 0, R_OUT - CH_OUT, a_ch, 180 - a_ch)
+arc(0, 0, R_OUT - CH_OUT, 180 + a_ch, 360 - a_ch)
+# проушины R6 с отверстиями Ø10
+y_join = math.sqrt(R_OUT ** 2 - LUG_R ** 2)
+for s in (1, -1):
+    line(-LUG_R, s * y_join, -LUG_R, s * LUG_C)
+    line(LUG_R, s * y_join, LUG_R, s * LUG_C)
+    if s == 1:
+        arc(0, LUG_C, LUG_R, 0, 180)
+    else:
+        arc(0, -LUG_C, LUG_R, 180, 360)
+    circle(0, s * LUG_C, R_LUG_HOLE)
+# паз шириной 8 (сквозь торец)
+x_slot_out = math.sqrt(R_OUT ** 2 - SLOT_H ** 2)
+for sx in (1, -1):
+    for sy in (1, -1):
+        line(sx * SQ_H, sy * SLOT_H, sx * x_slot_out, sy * SLOT_H)
+# квадратное отверстие 35 со скруглениями R4
+a, r = SQ_H, SQ_R
+line(-a + r, a, a - r, a)
+line(-a + r, -a, a - r, -a)
+line(a, -a + r, a, a - r)
+line(-a, -a + r, -a, a - r)
+arc(a - r, a - r, r, 0, 90)
+arc(-a + r, a - r, r, 90, 180)
+arc(-a + r, -a + r, r, 180, 270)
+arc(a - r, -a + r, r, 270, 360)
+# канавка Ø22 и отверстие Ø14
+circle(0, 0, R_GROOVE)
+circle(0, 0, R_BORE)
+# невидимые резьбовые отверстия M12
+for s in (1, -1):
+    circle(0, s * M12_Y, M12_R, "Штриховая")
+    circle(0, s * M12_Y, M12_RMIN, "Штриховая")
+# осевые
+line(-R_OUT - 5, 0, R_OUT + 5, 0, "Осевая")
+line(0, -LUG_TOP - 5, 0, LUG_TOP + 5, "Осевая")
+for s in (1, -1):
+    line(-LUG_R - 3, s * LUG_C, LUG_R + 3, s * LUG_C, "Осевая")
+    line(-M12_R - 3, s * M12_Y, M12_R + 3, s * M12_Y, "Осевая")
+
+# --- размеры вида справа
+dim_lin((0, LUG_C), (0, -LUG_C), (R_OUT + 14, 0), angle=90)              # 80
+dim_lin((-SQ_H, SQ_H), (-SQ_H, -SQ_H), (-R_OUT - 12, 0), angle=90,
+        text=SQ + "35")                                                   # □35
+dim_rad(SQ_H - SQ_R, SQ_H - SQ_R, SQ_R, 45, text="R4")
+dim_rad(0, -LUG_C, LUG_R, 225, text="R6")
+dim_dia(0, 0, R_GROOVE, 60, text=DIA + "22")
+dim_dia(0, 0, R_BORE, 120, text=DIA + "14")
+dim_dia(0, LUG_C, R_LUG_HOLE, 0, text=DIA + "10 2 отв.", loc=(-22, 58))
+
+# ================================================================ РАМКА А3 И ОСНОВНАЯ НАДПИСЬ
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
+poly([(0, 0), (420, 0), (420, 297), (0, 297)], "Рамка_тонкая", closed=True)
+poly([(20, 5), (415, 5), (415, 292), (20, 292)], "Рамка", closed=True)
+
+TX, TY = 415 - 185, 5  # левый нижний угол основной надписи (форма 1, ГОСТ 2.104)
+B = "Рамка"
+T = "Рамка_тонкая"
+poly([(TX, TY), (TX, TY + 55), (415, TY + 55)], B)
+# вертикали
+for x, y1, y2, lay in [(7, 0, 55, B), (17, 0, 55, B), (40, 0, 55, B), (55, 0, 55, B),
+                       (65, 0, 55, B), (135, 0, 40, B), (140, 20, 40, T), (145, 20, 40, T),
+                       (150, 0, 40, B), (155, 15, 20, B), (167, 15, 40, B)]:
+    line(TX + x, TY + y1, TX + x, TY + y2, lay)
+# горизонтали левой части
+for i in range(1, 11):
+    y = 5 * i
+    lay = B if y in (25, 30) else T
+    line(TX, TY + y, TX + 65, TY + y, lay)
+for x1, y, x2 in [(65, 40, 185), (135, 35, 185), (135, 20, 185), (135, 15, 185),
+                  (65, 15, 135)]:
+    line(TX + x1, TY + y, TX + x2, TY + y, B)
+
+def tb(x, y, s, h=2.5, align=TextEntityAlignment.LEFT):
+    text(TX + x, TY + y, s, h=h, layer="Рамка_тонкая", align=align)
+
+tb(1, 26, "Изм."); tb(7.6, 26, "Лист"); tb(18, 26, "№ докум."); tb(41, 26, "Подп."); tb(56, 26, "Дата")
+tb(1, 21, "Разраб."); tb(1, 16, "Пров."); tb(1, 11, "Т.контр.")
+tb(1, 1, "Утв."); tb(1, 6, "Н.контр.")
+tb(136, 36, "Лит."); tb(151, 36, "Масса"); tb(168, 36, "Масштаб")
+tb(136, 16, "Лист 1"); tb(156, 16, "Листов 1")
+tb(176, 26.5, "1:1", h=3.5, align=TextEntityAlignment.MIDDLE_CENTER)
+tb(125, 47.5, "НГКГ.ЛР2.19.00.00", h=5, align=TextEntityAlignment.MIDDLE_CENTER)
+tb(100, 30, "Втулка фланцевая", h=5, align=TextEntityAlignment.MIDDLE_CENTER)
+tb(100, 22, "Вариант 19", h=3.5, align=TextEntityAlignment.MIDDLE_CENTER)
+tb(100, 7.5, "Сталь 45 ГОСТ 1050-2013", h=3.5, align=TextEntityAlignment.MIDDLE_CENTER)
+
+# Неуказанная шероховатость в правом верхнем углу: Ra 12,5 (√)
+RX, RY = 380, 274
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(RX, RY)
+poly([(-2.5, 2.5), (0, 0), (5, 8.66), (14, 8.66)], "Обозначения")
+text(1, 9.7, "Ra 12,5", h=3.5, layer="Обозначения")
+text(16, 1, "(", h=5, layer="Обозначения")
+poly([(18.5, 3.5), (20, 2), (23, 7.2)], "Обозначения")
+text(24, 1, ")", h=5, layer="Обозначения")
+
+doc.saveas(OUT)
+print("saved", OUT)
