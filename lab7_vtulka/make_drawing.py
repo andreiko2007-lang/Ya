@@ -1,7 +1,7 @@
 """Чертёж шлицевой втулки, ЛР №7, вариант 19 (ГОСТ 1139-80, средняя серия).
 
 Строит один и тот же набор примитивов в два формата:
-  * vtulka_v19.pdf / .png — для просмотра и печати (формат А4 вертикальный, масштаб 1:1);
+  * vtulka_v19.pdf / .png — для просмотра и печати (формат А4 вертикальный, масштаб 1:2);
   * vtulka_v19.dxf        — для открытия в КОМПАС-3D / AutoCAD (масштаб 1:1, мм).
 
 Запуск:  python3 make_drawing.py
@@ -36,7 +36,7 @@ DENSITY = 7.85e-3      # г/мм^3, сталь 08
 
 # ---------------------------------------------------------------- примитивы
 S_MAIN, S_THIN, S_CUT = 0.7, 0.25, 1.0   # толщины линий, мм
-HATCH_STEP = 2.5
+HATCH_STEP = 2.0
 FONT = FontProperties(family="DejaVu Sans", style="italic")
 CAP = 0.729                              # высота прописной буквы / кегль (DejaVu Sans)
 
@@ -205,7 +205,7 @@ HOLE_POLY = Polygon(HOLE)
 # ---------------------------------------------------------------- лист
 sh = Sheet()
 W, H = 210.0, 297.0            # формат А4 (вертикальный, ГОСТ 2.301)
-S = 1.0                        # масштаб главного вида и разреза 1:1
+S = 0.5                        # масштаб главного вида и разреза 1:2
 
 # рамка и дополнительные графы (ГОСТ 2.104)
 sh.pl([(0, 0), (W, 0), (W, H), (0, H)], "thin", closed=True)
@@ -227,8 +227,8 @@ for y0, y1, labels in ((5, 150, ((25, "Инв. № подл."), (35, "Подп. 
         sh.text((12, y + hgt / 2), lab, h=2.5, ang=90, ha="center", fit=hgt - 3)
         y += hgt
 
-# ---- главный вид: фронтальный разрез (плоскость симметрии), 1:1
-X0, Y0 = 40.0, 214.0
+# ---- главный вид: фронтальный разрез (плоскость симметрии), 1:2
+X0, Y0 = 60.0, 210.0
 
 
 def M(x, y):
@@ -246,34 +246,34 @@ for s in (1, -1):
     sh.pl([M(0, s * (Rd + CH)), M(CH, s * Rd), M(L - CH, s * Rd), M(L, s * (Rd + CH))], "main")
     sh.hatch(Polygon([M(0, s * RD), M(0, s * Rf), M(T_FL, s * Rf), M(T_FL, s * Rh),
                       M(L, s * Rh), M(L, s * RD)]))
-sh.line((X0 - 6, Y0), (M(L, 0)[0] + 6, Y0), "center")
+sh.line((X0 - 5, Y0), (M(L, 0)[0] + 5, Y0), "center")
 
 # размеры главного вида (отступы — в мм листа, числа — натуральные размеры)
-sh.dim_linear(M(0, -Rf), M(0, Rf), (-1, 0), 12, "⌀96")
-sh.dim_linear(M(L, -Rh), M(L, Rh), (1, 0), 12, "⌀72")
-# длина 76,8: выносные от нижних точек фланца и ступицы
-y_dim = M(0, -Rf)[1] - 14
-sh.line(M(0, -Rf), (M(0, 0)[0], y_dim - 2))
-sh.line(M(L, -Rh), (M(L, 0)[0], y_dim - 2))
-sh.line((M(0, 0)[0], y_dim), (M(L, 0)[0], y_dim))
-sh.arrow((M(0, 0)[0], y_dim), (-1, 0))
-sh.arrow((M(L, 0)[0], y_dim), (1, 0))
-sh.text((M(L / 2, 0)[0], y_dim + 1), "76,8", ha="center")
-# толщина фланца 12
+sh.dim_linear(M(0, -Rf), M(0, Rf), (-1, 0), 10, "⌀96")
+sh.dim_linear(M(L, -Rh), M(L, Rh), (1, 0), 10, "⌀72")
+# толщина фланца 12 — короткий размер, стрелки снаружи
 y12 = M(0, Rf)[1] + 8
-sh.line(M(0, Rf), (M(0, 0)[0], y12 + 2))
-sh.line(M(T_FL, Rf), (M(T_FL, 0)[0], y12 + 2))
-sh.line((M(0, 0)[0], y12), (M(T_FL, 0)[0], y12))
-sh.arrow((M(0, 0)[0], y12), (-1, 0))
-sh.arrow((M(T_FL, 0)[0], y12), (1, 0))
-sh.text((M(T_FL / 2, 0)[0], y12 + 1), "12", ha="center")
-# обозначение шлицевого профиля
-sh.leader(M(30, Rd), (M(46, 0)[0], M(0, Rf)[1] + 10), 36, "d-8×42H7×48H12×8D9")
-# фаски
-sh.leader(M(CH * 0.55, -(Rd + CH * 0.45)), (M(16, 0)[0], M(0, -Rf)[1] - 6), 34, "2 фаски 1×45°")
+xa, xb = M(0, 0)[0], M(T_FL, 0)[0]
+sh.line(M(0, Rf), (xa, y12 + 2))
+sh.line(M(T_FL, Rf), (xb, y12 + 2))
+sh.line((xa - 6, y12), (xb + 6, y12))
+sh.arrow((xa, y12), (1, 0))
+sh.arrow((xb, y12), (-1, 0))
+sh.text(((xa + xb) / 2, y12 + 1), "12", ha="center")
+# длина 76,8 — над размером 12
+y_dim = y12 + 10
+xe = M(L, 0)[0]
+sh.line((xa, y12 + 2), (xa, y_dim + 2))
+sh.line(M(L, Rh), (xe, y_dim + 2))
+sh.line((xa, y_dim), (xe, y_dim))
+sh.arrow((xa, y_dim), (-1, 0))
+sh.arrow((xe, y_dim), (1, 0))
+sh.text(((xa + xe) / 2, y_dim + 1), "76,8", ha="center")
+# обозначение шлицевого профиля (выноска вниз)
+sh.leader(M(15, -Rd), (M(40, 0)[0], M(0, -Rf)[1] - 22), 36, "d-8×42H7×48H12×8D9")
 
 # след секущей плоскости А-А
-xc = M(70.0, 0)[0]
+xc = M(72.0, 0)[0]
 for s in (1, -1):
     y_in = Y0 + s * (S * Rh + 3)
     y_out = Y0 + s * (S * Rh + 14)
@@ -281,71 +281,59 @@ for s in (1, -1):
     ya = Y0 + s * (S * Rh + 12)
     sh.line((xc, ya), (xc - 9, ya), "thin")
     sh.arrow((xc - 9, ya), (-1, 0), length=4.0, width=1.4)
-    sh.text((xc - 5, ya + (1.5 if s > 0 else -6.5)), "А", h=5, ha="center")
+    sh.text((xc - 4.5, ya + (1.5 if s > 0 else -6.5)), "А", h=5, ha="center")
 
-# ---- разрез А-А, 1:1 — половина изображения (симметричная фигура, ГОСТ 2.305)
-CX, CY = 82.0, 72.0
+# ---- разрез А-А, 1:2
+CX, CY = 162.0, Y0
 
 
 def A(p):
     return (CX + S * p[0], CY + S * p[1])
 
 
-upper = Polygon([(CX - 200, CY), (CX + 200, CY), (CX + 200, CY + 200), (CX - 200, CY + 200)])
-
-
-def half_arc(rad):
-    return [(CX + rad * math.cos(math.pi * i / 180), CY + rad * math.sin(math.pi * i / 180))
-            for i in range(181)]
-
-
-sh.text((CX, CY + S * Rf + 7), "А–А", h=5, ha="center")
-sh.pl(half_arc(S * Rf), "main")          # фланец за секущей плоскостью
-sh.pl(half_arc(S * Rh), "main")
+sh.text((CX, CY + S * Rf + 8), "А–А", h=5, ha="center")
+sh.circle((CX, CY), S * Rf, "main")      # фланец за секущей плоскостью
+sh.circle((CX, CY), S * Rh, "main")
+sh.pl([A(p) for p in HOLE], "main", closed=True)
 hole_A = affinity.affine_transform(HOLE_POLY, [S, 0, 0, S, CX, CY])
-for seg in iter_lines(LineString(list(hole_A.exterior.coords)).intersection(upper)):
-    sh.pl(list(seg.coords), "main")
-ring = Point(CX, CY).buffer(S * Rh, 256).difference(hole_A).intersection(upper)
+ring = Point(CX, CY).buffer(S * Rh, 256).difference(hole_A)
 sh.hatch(ring)
-ax_end = S * Rf + 8
-sh.line((CX - ax_end, CY), (CX + ax_end, CY), "center")
-sh.line((CX, CY - 3), (CX, CY + S * Rf + 3), "center")
-for sx in (-1, 1):                       # знак симметрии
-    for dx in (S * Rf + 2.5, S * Rf + 5):
-        sh.line((CX + sx * dx, CY - 3.5), (CX + sx * dx, CY + 3.5))
+sh.line((CX - S * Rf - 4, CY), (CX + S * Rf + 4, CY), "center")
+sh.line((CX, CY - S * Rf - 4), (CX, CY + S * Rf + 4), "center")
 
 
-def half_dia(angle_deg, rad, rout, text, to_right):
-    """Диаметр на половине изображения: линия за центр, одна стрелка."""
+def dia_dim(angle_deg, rad, rout, text, to_right):
+    """rad — радиус детали (мм), rout — вынос полки в мм листа от центра."""
     a = math.radians(angle_deg)
     u = (math.cos(a), math.sin(a))
-    p0 = (CX - u[0] * 8, CY - u[1] * 8)
+    p1 = (CX - u[0] * S * rad, CY - u[1] * S * rad)
     p2 = (CX + u[0] * S * rad, CY + u[1] * S * rad)
     p3 = (CX + u[0] * rout, CY + u[1] * rout)
-    sh.line(p0, p3)
-    sh.arrow(p2, u)
+    sh.line(p1, p3)
+    sh.arrow(p1, (-u[0], -u[1]), length=2.5, width=0.8)
+    sh.arrow(p2, u, length=2.5, width=0.8)
     shelf = text_width(text, 3.5) + 2.5
     end = (p3[0] + (shelf if to_right else -shelf), p3[1])
     sh.line(p3, end)
     sh.text((min(p3[0], end[0]) + 1, p3[1] + 1), text)
 
 
-half_dia(22.5, Rd, S * Rf + 10, "⌀42", True)
-half_dia(135.0, RD, S * Rf + 4, "⌀48", False)
+dia_dim(45.0, RD, S * Rf + 10, "⌀48", True)
+dia_dim(202.5, Rd, S * Rf + 12, "⌀42", False)
 
 # обозначение выносного элемента Б
 PB = (0.0, (Rd + RD) / 2)
-RB = 5.0                                  # радиус зоны элемента, мм детали
+RB = 6.0                                  # радиус зоны элемента, мм детали
 sh.circle(A(PB), S * RB, "thin")
 kb = (A(PB)[0] - S * RB * 0.5, A(PB)[1] + S * RB * 0.866)
-kn = (kb[0] - 12, kb[1] + 22)
+kn = (kb[0] - 12, kb[1] + 20)
 sh.line(kb, kn)
 sh.line(kn, (kn[0] - 8, kn[1]))
 sh.text((kn[0] - 4, kn[1] + 1), "Б", h=5, ha="center")
 
 # ---- выносной элемент Б (4:1)
 K = 4.0
-C3 = (181.0, 98.0)
+C3 = (82.0, 104.0)
 
 
 def Bx(p):
@@ -376,27 +364,29 @@ sh.text((C3[0] + 4, yb + 1), "8", ha="center")
 vc = b / 2 - r
 uc = math.sqrt((RD - r) ** 2 - vc ** 2)
 fil = Bx((-(vc + r * 0.707), uc + r * 0.707))
-sh.leader(fil, (C3[0] - 24, C3[1] + 22), 12, "R0,3", to_right=False)
+sh.leader(fil, (C3[0] - 28, C3[1] + 26), 12, "R0,3", to_right=False)
 # фаска c у d (левая кромка, выноска влево)
 chp = Bx((-(b / 2 + c / 2), yb_corner + c / 2))
-sh.leader(chp, (C3[0] - 22, C3[1] - 20), 12, "0,4×45°", to_right=False)
+sh.leader(chp, (C3[0] - 26, C3[1] - 22), 12, "0,4×45°", to_right=False)
 
 # ---- технические требования
 mass = (Point(0, 0).buffer(Rf, 512).difference(HOLE_POLY).area * T_FL
         + Point(0, 0).buffer(Rh, 512).difference(HOLE_POLY).area * (L - T_FL)) * DENSITY
 tt = [
     "1. Соединение шлицевое",
-    "    прямобочное, средняя",
-    "    серия, ГОСТ 1139-80.",
+    "    прямобочное, средняя серия,",
+    "    ГОСТ 1139-80.",
     "2. Центрирование по",
     "    внутреннему диаметру d.",
-    "3. Неуказанные предельные",
+    "3. Фаски на входе в шлицевое",
+    "    отверстие 1×45°, 2 места.",
+    "4. Неуказанные предельные",
     "    отклонения размеров:",
     "    H14, h14, ±IT14/2.",
-    "4. Острые кромки притупить.",
+    "5. Острые кромки притупить.",
 ]
 for i, s in enumerate(tt):
-    sh.text((138, 258 - i * 6), s, h=3.5, fit=W - 5 - 140)
+    sh.text((122, 146 - i * 6), s, h=3.5, fit=W - 5 - 124)
 
 # ---- основная надпись (ГОСТ 2.104, форма 1), 185 x 55
 TX, TY = W - 5 - 185, 5
@@ -434,15 +424,8 @@ for i, s in enumerate(("Шлейко И. Ю.", "Кулькова В. В.")):
 sh.text(T(142.5, 36.2), "Лит.", h=2.5, ha="center", fit=12.5)
 sh.text(T(158.5, 36.2), "Масса", h=2.5, ha="center", fit=14.5)
 sh.text(T(176, 36.2), "Масштаб", h=2.5, ha="center", fit=15.0)
-sh.text(T(137.5, 25.8), "У", h=3.5, ha="center", fit=3.0)
-sh.text(T(158.5, 25.2), f"{mass / 1000:.2f}".replace(".", ","), h=5, ha="center", fit=14)
-sh.text(T(176, 25.2), "1:1", h=5, ha="center", fit=15)
-sh.text(T(136.5, 16.2), "Лист 1", h=2.5, fit=18)
-sh.text(T(157, 16.2), "Листов 1", h=2.5, fit=27)
-sh.text(T(125, 44.5), f"ЛР7.{VAR:02d}.00.001", h=7, ha="center", fit=116)
-sh.text(T(100, 30), "Втулка шлицевая", h=5, ha="center", fit=66)
-sh.text(T(100, 9.5), "Сталь 08 ГОСТ 1050-2013", h=3.5, ha="center", fit=66)
-sh.text(T(160, 6), f"Вариант {VAR}", h=3.5, ha="center", fit=46)
+sh.text(T(136.5, 16.2), "Лист", h=2.5, fit=18)
+sh.text(T(157, 16.2), "Листов", h=2.5, fit=27)
 
 # ---------------------------------------------------------------- вывод: PDF / PNG
 plt.rcParams["lines.scale_dashes"] = False
