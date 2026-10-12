@@ -15,7 +15,10 @@ from ezdxf.enums import TextEntityAlignment
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon as MplPolygon
+from matplotlib.font_manager import FontProperties
+from matplotlib.patches import PathPatch, Polygon as MplPolygon
+from matplotlib.textpath import TextPath
+from matplotlib.transforms import Affine2D
 from shapely.geometry import Point, Polygon, LineString
 from shapely import affinity
 
@@ -34,6 +37,15 @@ DENSITY = 7.85e-3      # г/мм^3, сталь 08
 # ---------------------------------------------------------------- примитивы
 S_MAIN, S_THIN, S_CUT = 0.7, 0.25, 1.0   # толщины линий, мм
 HATCH_STEP = 2.5
+FONT = FontProperties(family="DejaVu Sans", style="italic")
+CAP = 0.729                              # высота прописной буквы / кегль (DejaVu Sans)
+
+
+def text_width(s, h):
+    """Ширина надписи (мм) при высоте прописных букв h."""
+    if not s:
+        return 0.0
+    return TextPath((0, 0), s, size=h / CAP, prop=FONT).get_extents().x1
 
 
 class Sheet:
@@ -52,8 +64,12 @@ class Sheet:
     def fill(self, pts):
         self.items.append(("fill", [tuple(p) for p in pts]))
 
-    def text(self, p, s, h=3.5, ang=0.0, ha="left", va="bottom"):
-        self.items.append(("text", tuple(p), s, h, ang, ha, va))
+    def text(self, p, s, h=3.5, ang=0.0, ha="left", va="bottom", fit=None):
+        """fit — максимальная ширина, мм: длинная надпись сжимается по ширине."""
+        wf = 1.0
+        if fit is not None:
+            wf = min(1.0, fit / text_width(s, h))
+        self.items.append(("text", tuple(p), s, h, ang, ha, va, wf))
 
     # --- составные элементы
     def arrow(self, tip, direction, length=3.5, width=1.0):
@@ -108,6 +124,7 @@ class Sheet:
         self.line(tip, knee)
         if arrow:
             self.arrow(tip, (tip[0] - knee[0], tip[1] - knee[1]))
+        shelf_len = max(shelf_len, text_width(text, h) + 2.5)
         end = (knee[0] + (shelf_len if to_right else -shelf_len), knee[1])
         self.line(knee, end)
         x0 = min(knee[0], end[0])
@@ -275,6 +292,7 @@ def dia_dim(angle_deg, rad, rout, shelf, text, to_right):
     sh.line(p1, p3)
     sh.arrow(p1, (-u[0], -u[1]))
     sh.arrow(p2, u)
+    shelf = max(shelf, text_width(text, 3.5) + 2.5)
     end = (p3[0] + (shelf if to_right else -shelf), p3[1])
     sh.line(p3, end)
     sh.text((min(p3[0], end[0]) + 1, p3[1] + 1), text)
@@ -369,23 +387,24 @@ sh.line(T(167, 40), T(167, 20), "main")
 sh.line(T(140, 35), T(140, 20), "thin")
 sh.line(T(145, 35), T(145, 20), "thin")
 sh.line(T(155, 20), T(155, 15), "main")
-for x, s in ((3.5, "Изм."), (12, "Лист"), (28.5, "№ докум."), (47.5, "Подп."), (60, "Дата")):
-    sh.text(T(x, 31.4), s, h=2.0, ha="center")
+for x, w, s in ((3.5, 7, "Изм."), (12, 10, "Лист"), (28.5, 23, "№ докум."),
+                (47.5, 15, "Подп."), (60, 10, "Дата")):
+    sh.text(T(x, 31.2), s, h=2.5, ha="center", fit=w - 2.4)
 for i, s in enumerate(("Разраб.", "Пров.", "Т.контр.", "", "Н.контр.", "Утв.")):
     if s:
-        sh.text(T(1, 26.2 - 5 * i), s, h=2.5)
-sh.text(T(142.5, 36.2), "Лит.", h=2.5, ha="center")
-sh.text(T(158.5, 36.2), "Масса", h=2.5, ha="center")
-sh.text(T(176, 36.4), "Масштаб", h=2.1, ha="center")
-sh.text(T(137.5, 24.5), "У", h=5, ha="center")
-sh.text(T(158.5, 24.5), f"{mass / 1000:.2f}".replace(".", ","), h=5, ha="center")
-sh.text(T(176, 24.5), "1:1", h=5, ha="center")
-sh.text(T(137, 16.2), "Лист 1", h=2.5)
-sh.text(T(157, 16.2), "Листов 1", h=2.5)
-sh.text(T(125, 44.5), f"ЛР7.{VAR:02d}.00.001", h=7, ha="center")
-sh.text(T(100, 30), "Втулка шлицевая", h=5, ha="center")
-sh.text(T(100, 9.5), "Сталь 08 ГОСТ 1050-2013", h=3.5, ha="center")
-sh.text(T(160, 6), f"Вариант {VAR}", h=3.5, ha="center")
+        sh.text(T(1.0, 26.2 - 5 * i), s, h=2.5, fit=14.4)
+sh.text(T(142.5, 36.2), "Лит.", h=2.5, ha="center", fit=12.5)
+sh.text(T(158.5, 36.2), "Масса", h=2.5, ha="center", fit=14.5)
+sh.text(T(176, 36.2), "Масштаб", h=2.5, ha="center", fit=15.0)
+sh.text(T(137.5, 25.8), "У", h=3.5, ha="center", fit=3.0)
+sh.text(T(158.5, 25.2), f"{mass / 1000:.2f}".replace(".", ","), h=5, ha="center", fit=14)
+sh.text(T(176, 25.2), "1:1", h=5, ha="center", fit=15)
+sh.text(T(136.5, 16.2), "Лист 1", h=2.5, fit=18)
+sh.text(T(157, 16.2), "Листов 1", h=2.5, fit=27)
+sh.text(T(125, 44.5), f"ЛР7.{VAR:02d}.00.001", h=7, ha="center", fit=116)
+sh.text(T(100, 30), "Втулка шлицевая", h=5, ha="center", fit=66)
+sh.text(T(100, 9.5), "Сталь 08 ГОСТ 1050-2013", h=3.5, ha="center", fit=66)
+sh.text(T(160, 6), f"Вариант {VAR}", h=3.5, ha="center", fit=46)
 
 # ---------------------------------------------------------------- вывод: PDF / PNG
 plt.rcParams["lines.scale_dashes"] = False
@@ -418,10 +437,15 @@ def render_mpl(path_pdf, path_png):
         elif kind == "fill":
             ax.add_patch(MplPolygon(it[1], closed=True, color="black", lw=0))
         elif kind == "text":
-            _, p, s, h, ang, ha, va = it
-            ax.text(p[0], p[1], s, fontsize=h / 0.729 * MM2PT, rotation=ang,
-                    ha=ha, va="baseline" if va == "bottom" else va,
-                    rotation_mode="anchor", family="DejaVu Sans", style="italic")
+            _, p, s, h, ang, ha, va, wf = it
+            if not s:
+                continue
+            path = TextPath((0, 0), s, size=h / CAP, prop=FONT)
+            w = path.get_extents().x1 * wf
+            dx = {"left": 0.0, "center": -w / 2, "right": -w}[ha]
+            tr = (Affine2D().scale(wf, 1).translate(dx, 0).rotate_deg(ang)
+                  .translate(*p) + ax.transData)
+            ax.add_patch(PathPatch(path, transform=tr, color="black", lw=0))
     fig.savefig(path_pdf)
     fig.savefig(path_png, dpi=200)
     plt.close(fig)
@@ -463,9 +487,12 @@ def render_dxf(path):
             hatch = msp.add_hatch(color=7, dxfattribs={"layer": "Тонкая"})
             hatch.paths.add_polyline_path(it[1], is_closed=True)
         elif kind == "text":
-            _, p, s, h, ang, ha, va = it
+            _, p, s, h, ang, ha, va, wf = it
+            if not s:
+                continue
             t = msp.add_text(s, height=h, rotation=ang,
-                             dxfattribs={"layer": "Текст", "style": "GOST", "oblique": 15})
+                             dxfattribs={"layer": "Текст", "style": "GOST", "oblique": 15,
+                                         "width": round(wf, 3)})
             t.set_placement(p, align=align[(ha, va)])
     doc.saveas(path)
 
