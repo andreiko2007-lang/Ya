@@ -1,7 +1,7 @@
 """Лабораторная работа №2, вариант 19 — чертёж фланцевой втулки.
 
 Генерирует DXF (AutoCAD 2010), который открывается в КОМПАС-3D через
-«Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А3 (альбомный).
+«Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А4 (книжный).
 
 Запуск:  python build_v19.py   (нужен пакет ezdxf)
 """
@@ -145,7 +145,7 @@ LUG_TOP = LUG_ARC + LUG_R           # 51
 
 # ================================================================ ГЛАВНЫЙ ВИД
 # (соединение половины вида и половины фронтального разреза)
-MX, MY = 262.0, 180.0
+MX, MY = 126.0, 176.0
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY)
 
 # --- верхняя половина: вид
@@ -212,15 +212,15 @@ dim_lin((0, -LUG_TOP), (M12_CH, yc - M12_R), (-14, -LUG_TOP - 9),
         text="2×45°")                                           # фаска 2×45°
 dim_lin((L - CH_OUT, R_OUT), (L, R_OUT - CH_OUT), (0, R_OUT + 10),
         text="2,5×45°")                                         # фаска 2,5×45°
-dim_lin((L, SLOT_H), (L, -SLOT_H), (L + 10, 0), angle=90)                # 8
-dim_lin((L - CH_OUT, R_OUT), (L - CH_OUT, -R_OUT), (L + 20, 0), angle=90,
+dim_lin((L, SLOT_H), (L, -SLOT_H), (L + 7, 0), angle=90)                # 8
+dim_lin((L - CH_OUT, R_OUT), (L - CH_OUT, -R_OUT), (L + 14, 0), angle=90,
         text=DIA + "60")                                                  # Ø60
-dim_lin((0, yc + M12_R), (0, yc - M12_R), (-10, 0), angle=90, text="M12")
-text(-17, yc - 4, "2 отв.", rot=90, align=TextEntityAlignment.MIDDLE_CENTER)
+dim_lin((0, yc + M12_R), (0, yc - M12_R), (-7, 0), angle=90, text="M12")
+text(-12.5, yc - 4, "2 отв.", rot=90, align=TextEntityAlignment.MIDDLE_CENTER)
 
 # ================================================================ ВИД СПРАВА
 # по ГОСТ 2.305 располагается слева от главного вида
-SX, SY = 132.0, 180.0
+SX, SY = 62.0, 176.0
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY)
 
 circle(0, 0, R_OUT)
@@ -268,8 +268,8 @@ for s in (1, -1):
     line(-M12_R - 3, s * M12_Y, M12_R + 3, s * M12_Y, "Осевая")
 
 # --- размеры вида справа
-dim_lin((0, LUG_C), (0, -LUG_C), (R_OUT + 14, 0), angle=90)              # 80
-dim_lin((-SQ_H, SQ_H), (-SQ_H, -SQ_H), (-R_OUT - 12, 0), angle=90,
+dim_lin((0, LUG_C), (0, -LUG_C), (R_OUT + 8, 0), angle=90)              # 80
+dim_lin((-SQ_H, SQ_H), (-SQ_H, -SQ_H), (-R_OUT - 6, 0), angle=90,
         text=SQ + "35")                                                   # □35
 dim_rad(SQ_H - SQ_R, SQ_H - SQ_R, SQ_R, 45, text="R4")
 dim_rad(0, -LUG_ARC, LUG_R, 225, text="R6")
@@ -277,15 +277,15 @@ dim_dia(0, 0, R_GROOVE, 60, text=DIA + "22")
 dim_dia(0, 0, R_BORE, 120, text=DIA + "14")
 dim_dia(0, LUG_C, R_LUG_HOLE, 0, text=DIA + "10 2 отв.", loc=(-22, 58))
 
-# ================================================================ РАМКА А3 И ОСНОВНАЯ НАДПИСЬ
+# ================================================================ РАМКА А4 И ОСНОВНАЯ НАДПИСЬ
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
-poly([(0, 0), (420, 0), (420, 297), (0, 297)], "Рамка_тонкая", closed=True)
-poly([(20, 5), (415, 5), (415, 292), (20, 292)], "Рамка", closed=True)
+poly([(0, 0), (210, 0), (210, 297), (0, 297)], "Рамка_тонкая", closed=True)
+poly([(20, 5), (205, 5), (205, 292), (20, 292)], "Рамка", closed=True)
 
-TX, TY = 415 - 185, 5  # левый нижний угол основной надписи (форма 1, ГОСТ 2.104)
+TX, TY = 205 - 185, 5  # левый нижний угол основной надписи (форма 1, ГОСТ 2.104)
 B = "Рамка"
 T = "Рамка_тонкая"
-poly([(TX, TY), (TX, TY + 55), (415, TY + 55)], B)
+poly([(TX, TY), (TX, TY + 55), (205, TY + 55)], B)
 # вертикали (графы по ГОСТ 2.104, форма 1)
 for x, y1, y2, lay in [(7, 30, 55, B), (17, 0, 55, B), (40, 0, 55, B), (55, 0, 55, B),
                        (65, 0, 55, B), (135, 0, 40, B), (140, 20, 35, T), (145, 20, 35, T),
