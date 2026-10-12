@@ -104,9 +104,9 @@ def mk(ox, oy):
                                dxfattribs={"layer": "Размеры"})
         d.render()
 
-    def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0):
+    def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0, width=0.8):
         t = msp.add_text(s, height=h, rotation=rot,
-                         dxfattribs={"layer": layer, "style": "GOST"})
+                         dxfattribs={"layer": layer, "style": "GOST", "width": width})
         t.set_placement(P(x, y), align=align)
 
     return P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text
@@ -287,7 +287,7 @@ B = "Рамка"
 T = "Рамка_тонкая"
 poly([(TX, TY), (TX, TY + 55), (415, TY + 55)], B)
 # вертикали (графы по ГОСТ 2.104, форма 1)
-for x, y1, y2, lay in [(7, 0, 55, B), (17, 0, 55, B), (40, 0, 55, B), (55, 0, 55, B),
+for x, y1, y2, lay in [(7, 30, 55, B), (17, 0, 55, B), (40, 0, 55, B), (55, 0, 55, B),
                        (65, 0, 55, B), (135, 0, 40, B), (140, 20, 35, T), (145, 20, 35, T),
                        (150, 20, 40, B), (155, 15, 20, B), (167, 20, 40, B)]:
     line(TX + x, TY + y1, TX + x, TY + y2, lay)
@@ -302,24 +302,17 @@ for x1, y, x2 in [(65, 40, 185), (135, 35, 185), (135, 20, 185), (135, 15, 185),
     line(TX + x1, TY + y, TX + x2, TY + y, B)
 
 def tb(x, y, s, h=2.5, align=TextEntityAlignment.LEFT):
-    text(TX + x, TY + y, s, h=h, layer="Рамка_тонкая", align=align)
+    text(TX + x, TY + y, s, h=h, layer="Рамка_тонкая", align=align, width=0.65)
+
+C = TextEntityAlignment.MIDDLE_CENTER
 
 # только подписи граф — поля для заполнения оставлены пустыми
-tb(0.6, 31.2, "Изм."); tb(7.6, 31.2, "Лист"); tb(18, 31.2, "№ докум.")
-tb(41, 31.2, "Подп."); tb(56, 31.2, "Дата")
+tb(3.5, 32.5, "Изм.", align=C); tb(12, 32.5, "Лист", align=C); tb(28.5, 32.5, "№ докум.", align=C)
+tb(47.5, 32.5, "Подп.", align=C); tb(60, 32.5, "Дата", align=C)
 tb(0.6, 26.2, "Разраб."); tb(0.6, 21.2, "Пров."); tb(0.6, 16.2, "Т.контр.")
 tb(0.6, 6.2, "Н.контр."); tb(0.6, 1.2, "Утв.")
-tb(137.5, 36.2, "Лит."); tb(152, 36.2, "Масса"); tb(168, 36.2, "Масштаб")
+tb(142.5, 37.5, "Лит.", align=C); tb(158.5, 37.5, "Масса", align=C); tb(176, 37.5, "Масштаб", align=C)
 tb(136, 16.2, "Лист"); tb(156, 16.2, "Листов")
-
-# Неуказанная шероховатость в правом верхнем углу: Ra 12,5 (√)
-RX, RY = 380, 274
-P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(RX, RY)
-poly([(-2.5, 2.5), (0, 0), (5, 8.66), (14, 8.66)], "Обозначения")
-text(1, 9.7, "Ra 12,5", h=3.5, layer="Обозначения")
-text(16, 1, "(", h=5, layer="Обозначения")
-poly([(18.5, 3.5), (20, 2), (23, 7.2)], "Обозначения")
-text(24, 1, ")", h=5, layer="Обозначения")
 
 doc.saveas(OUT)
 print("saved", OUT)
