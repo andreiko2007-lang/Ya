@@ -140,11 +140,12 @@ CONE = M12_RMIN / math.tan(math.radians(59))  # конец сверла 118°
 X_GROOVE = L - SQ_DEPTH - GROOVE_W  # 23
 X_SQ = L - SQ_DEPTH                 # 30
 X_SLOT = L - SLOT_D                 # 50
-LUG_TOP = LUG_C + LUG_R             # 46
+LUG_ARC = 45.0                      # центр скругления R6 торца проушины (по исходному чертежу)
+LUG_TOP = LUG_ARC + LUG_R           # 51
 
 # ================================================================ ГЛАВНЫЙ ВИД
 # (соединение половины вида и половины фронтального разреза)
-MX, MY = 205.0, 165.0
+MX, MY = 262.0, 180.0
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY)
 
 # --- верхняя половина: вид
@@ -219,7 +220,7 @@ text(-17, yc - 4, "2 отв.", rot=90, align=TextEntityAlignment.MIDDLE_CENTER)
 
 # ================================================================ ВИД СПРАВА
 # по ГОСТ 2.305 располагается слева от главного вида
-SX, SY = 95.0, 165.0
+SX, SY = 132.0, 180.0
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY)
 
 circle(0, 0, R_OUT)
@@ -230,12 +231,12 @@ arc(0, 0, R_OUT - CH_OUT, 180 + a_ch, 360 - a_ch)
 # проушины R6 с отверстиями Ø10
 y_join = math.sqrt(R_OUT ** 2 - LUG_R ** 2)
 for s in (1, -1):
-    line(-LUG_R, s * y_join, -LUG_R, s * LUG_C)
-    line(LUG_R, s * y_join, LUG_R, s * LUG_C)
+    line(-LUG_R, s * y_join, -LUG_R, s * LUG_ARC)
+    line(LUG_R, s * y_join, LUG_R, s * LUG_ARC)
     if s == 1:
-        arc(0, LUG_C, LUG_R, 0, 180)
+        arc(0, LUG_ARC, LUG_R, 0, 180)
     else:
-        arc(0, -LUG_C, LUG_R, 180, 360)
+        arc(0, -LUG_ARC, LUG_R, 180, 360)
     circle(0, s * LUG_C, R_LUG_HOLE)
 # паз шириной 8 (сквозь торец)
 x_slot_out = math.sqrt(R_OUT ** 2 - SLOT_H ** 2)
@@ -271,7 +272,7 @@ dim_lin((0, LUG_C), (0, -LUG_C), (R_OUT + 14, 0), angle=90)              # 80
 dim_lin((-SQ_H, SQ_H), (-SQ_H, -SQ_H), (-R_OUT - 12, 0), angle=90,
         text=SQ + "35")                                                   # □35
 dim_rad(SQ_H - SQ_R, SQ_H - SQ_R, SQ_R, 45, text="R4")
-dim_rad(0, -LUG_C, LUG_R, 225, text="R6")
+dim_rad(0, -LUG_ARC, LUG_R, 225, text="R6")
 dim_dia(0, 0, R_GROOVE, 60, text=DIA + "22")
 dim_dia(0, 0, R_BORE, 120, text=DIA + "14")
 dim_dia(0, LUG_C, R_LUG_HOLE, 0, text=DIA + "10 2 отв.", loc=(-22, 58))
