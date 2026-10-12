@@ -1,0 +1,476 @@
+"""Чертёж шлицевой втулки, ЛР №7, вариант 19 (ГОСТ 1139-80, средняя серия).
+
+Строит один и тот же набор примитивов в два формата:
+  * vtulka_v19.pdf / .png — для просмотра и печати (формат А3);
+  * vtulka_v19.dxf        — для открытия в КОМПАС-3D / AutoCAD (масштаб 1:1, мм).
+
+Запуск:  python3 make_drawing.py
+Зависимости: matplotlib, ezdxf, shapely.
+"""
+import math
+from pathlib import Path
+
+import ezdxf
+from ezdxf.enums import TextEntityAlignment
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon as MplPolygon
+from shapely.geometry import Point, Polygon, LineString
+from shapely import affinity
+
+OUT = Path(__file__).resolve().parent
+
+# ---------------------------------------------------------------- исходные данные
+VAR = 19
+Z, d, D, b, c, r = 8, 42.0, 48.0, 8.0, 0.4, 0.3   # табл. 2.1, вариант 19
+L = 1.6 * D            # длина втулки            76,8
+D_FL = 2.0 * D         # диаметр фланца          96
+D_HUB = 1.5 * D        # диаметр ступицы         72
+T_FL = 0.25 * D        # толщина фланца          12
+CH = 1.0               # фаска на входе в отверстие 1x45°
+DENSITY = 7.85e-3      # г/мм^3, сталь 08
+
+# ---------------------------------------------------------------- примитивы
+S_MAIN, S_THIN, S_CUT = 0.7, 0.25, 1.0   # толщины линий, мм
+HATCH_STEP = 2.5
+
+
+class Sheet:
+    def __init__(self):
+        self.items = []
+
+    def pl(self, pts, lt="thin", closed=False):
+        self.items.append(("pl", [tuple(p) for p in pts], lt, closed))
+
+    def line(self, p, q, lt="thin"):
+        self.pl([p, q], lt)
+
+    def circle(self, cxy, rad, lt="main"):
+        self.items.append(("circle", tuple(cxy), rad, lt))
+
+    def fill(self, pts):
+        self.items.append(("fill", [tuple(p) for p in pts]))
+
+    def text(self, p, s, h=3.5, ang=0.0, ha="left", va="bottom"):
+        self.items.append(("text", tuple(p), s, h, ang, ha, va))
+
+    # --- составные элементы
+    def arrow(self, tip, direction, length=3.5, width=1.0):
+        ux, uy = unit(direction)
+        nx, ny = -uy, ux
+        bx, by = tip[0] - ux * length, tip[1] - uy * length
+        self.fill([tip, (bx + nx * width / 2, by + ny * width / 2),
+                   (bx - nx * width / 2, by - ny * width / 2)])
+
+    def hatch(self, geom, angle=45.0, step=HATCH_STEP):
+        minx, miny, maxx, maxy = geom.bounds
+        cx, cy = (minx + maxx) / 2, (miny + maxy) / 2
+        R = math.hypot(maxx - minx, maxy - miny)
+        a = math.radians(angle)
+        ux, uy = math.cos(a), math.sin(a)
+        nx, ny = -uy, ux
+        # привязка штриховки к общей сетке, чтобы линии в соседних
+        # областях одной детали совпадали
+        k0 = math.floor(((cx * nx + cy * ny) - R) / step)
+        k1 = math.ceil(((cx * nx + cy * ny) + R) / step)
+        for k in range(k0, k1 + 1):
+            off = k * step
+            px, py = nx * off, ny * off
+            t = (cx - px) * ux + (cy - py) * uy
+            seg = LineString([(px + ux * (t - R), py + uy * (t - R)),
+                              (px + ux * (t + R), py + uy * (t + R))])
+            for part in iter_lines(seg.intersection(geom)):
+                self.pl(list(part.coords), "thin")
+
+    def dim_linear(self, a, b_, n, off, text, ext_from=None, text_shift=0.0):
+        """Линейный размер между a и b_; n — единичная нормаль в сторону размерной линии."""
+        ux, uy = unit((b_[0] - a[0], b_[1] - a[1]))
+        pa = (a[0] + n[0] * off, a[1] + n[1] * off)
+        pb = (b_[0] + n[0] * off, b_[1] + n[1] * off)
+        for p, q in ((a, pa), (b_, pb)):
+            start = (p[0] + n[0] * 0.0, p[1] + n[1] * 0.0)
+            self.line(start, (q[0] + n[0] * 2, q[1] + n[1] * 2))
+        self.line(pa, pb)
+        self.arrow(pa, (-ux, -uy))
+        self.arrow(pb, (ux, uy))
+        ang = math.degrees(math.atan2(uy, ux))
+        if ang > 90.0001 or ang <= -90.0001:
+            ang += 180
+        ang = (ang + 180) % 360 - 180
+        ra = math.radians(ang)
+        tx, ty = -math.sin(ra), math.cos(ra)   # «верх» текста
+        mx = (pa[0] + pb[0]) / 2 + math.cos(ra) * text_shift + tx * 1.0
+        my = (pa[1] + pb[1]) / 2 + math.sin(ra) * text_shift + ty * 1.0
+        self.text((mx, my), text, ang=ang, ha="center", va="bottom")
+
+    def leader(self, tip, knee, shelf_len, text, to_right=True, arrow=True, h=3.5):
+        self.line(tip, knee)
+        if arrow:
+            self.arrow(tip, (tip[0] - knee[0], tip[1] - knee[1]))
+        end = (knee[0] + (shelf_len if to_right else -shelf_len), knee[1])
+        self.line(knee, end)
+        x0 = min(knee[0], end[0])
+        self.text((x0 + 1.0, knee[1] + 1.0), text, h=h)
+
+
+def unit(v):
+    l = math.hypot(*v)
+    return v[0] / l, v[1] / l
+
+
+def iter_lines(g):
+    if g.is_empty:
+        return
+    if g.geom_type == "LineString":
+        yield g
+    elif hasattr(g, "geoms"):
+        for x in g.geoms:
+            yield from iter_lines(x)
+
+
+def circle_pts(cxy, rad, n=360):
+    return [(cxy[0] + rad * math.cos(2 * math.pi * i / n),
+             cxy[1] + rad * math.sin(2 * math.pi * i / n)) for i in range(n)]
+
+
+# ---------------------------------------------------------------- профиль шлицевого отверстия
+def spline_hole(z=Z, d=d, D=D, b=b, c=c, r=r, phase=90.0):
+    """Замкнутый контур отверстия ступицы (пазы по D, выступы по d)."""
+    Rd, RD, hb = d / 2, D / 2, b / 2
+    # фаска c на кромке паза у диаметра d
+    u_ch_wall = math.sqrt(Rd ** 2 - hb ** 2) + c
+    v_ch_arc = hb + c
+    # скругление r в углу паза у диаметра D
+    vc = hb - r
+    uc = math.sqrt((RD - r) ** 2 - vc ** 2)
+    pts = []
+
+    def P(phi, v, u):
+        cph, sph = math.cos(phi), math.sin(phi)
+        return (u * cph - v * sph, u * sph + v * cph)
+
+    step = 2 * math.pi / z
+    for k in range(z):
+        phi = math.radians(phase) + k * step
+        # фаска (сторона -v)
+        pts.append(P(phi, -v_ch_arc, math.sqrt(Rd ** 2 - v_ch_arc ** 2)))
+        pts.append(P(phi, -hb, u_ch_wall))
+        # стенка и скругление
+        pts.append(P(phi, -hb, uc))
+        a_end = math.atan2(uc, -vc)          # направление на точку касания с окружностью D
+        for i in range(1, 6):
+            a = math.pi + (a_end - math.pi) * i / 6
+            pts.append(P(phi, -vc + r * math.cos(a), uc + r * math.sin(a)))
+        # дно паза по D
+        g0 = math.atan2(-vc * RD / (RD - r), uc * RD / (RD - r))
+        for i in range(0, 13):
+            g = g0 + (-2 * g0) * i / 12
+            pts.append(P(phi, RD * math.sin(g), RD * math.cos(g)))
+        for i in range(1, 6):
+            a = (math.pi - a_end) + (0 - (math.pi - a_end)) * i / 6
+            pts.append(P(phi, vc + r * math.cos(a), uc + r * math.sin(a)))
+        pts.append(P(phi, hb, uc))
+        pts.append(P(phi, hb, u_ch_wall))
+        pts.append(P(phi, v_ch_arc, math.sqrt(Rd ** 2 - v_ch_arc ** 2)))
+        # выступ ступицы по d до следующего паза
+        a0 = phi + math.asin(v_ch_arc / Rd)
+        a1 = phi + step - math.asin(v_ch_arc / Rd)
+        for i in range(1, 24):
+            a = a0 + (a1 - a0) * i / 24
+            pts.append((Rd * math.cos(a), Rd * math.sin(a)))
+    return pts
+
+
+HOLE = spline_hole()
+HOLE_POLY = Polygon(HOLE)
+
+# ---------------------------------------------------------------- лист
+sh = Sheet()
+W, H = 420.0, 297.0
+
+# рамка
+sh.pl([(0, 0), (W, 0), (W, H), (0, H)], "thin", closed=True)
+sh.pl([(20, 5), (415, 5), (415, 292), (20, 292)], "main", closed=True)
+sh.text((415, 1.2), "Формат А3", h=2.5, ha="right")
+sh.text((250, 1.2), "Копировал", h=2.5, ha="left")
+
+# ---- главный вид: фронтальный разрез (плоскость симметрии), 1:1
+X0, Y0 = 55.0, 190.0
+
+
+def M(x, y):
+    return (X0 + x, Y0 + y)
+
+
+Rd, RD, Rh, Rf = d / 2, D / 2, D_HUB / 2, D_FL / 2
+for s in (1, -1):
+    # наружный контур и торцы
+    sh.pl([M(0, s * (Rd + CH)), M(0, s * Rf), M(T_FL, s * Rf), M(T_FL, s * Rh),
+           M(L, s * Rh), M(L, s * (Rd + CH))], "main")
+    # поверхность по D (граница штриховки) и по d (зубья не рассекаются, ГОСТ 2.409)
+    sh.line(M(0, s * RD), M(L, s * RD), "main")
+    sh.pl([M(0, s * (Rd + CH)), M(CH, s * Rd), M(L - CH, s * Rd), M(L, s * (Rd + CH))], "main")
+    sh.hatch(Polygon([M(0, s * RD), M(0, s * Rf), M(T_FL, s * Rf), M(T_FL, s * Rh),
+                      M(L, s * Rh), M(L, s * RD)]))
+sh.line(M(-6, 0), M(L + 6, 0), "center")
+
+# размеры главного вида
+sh.dim_linear(M(0, -Rf), M(0, Rf), (-1, 0), 14, "⌀96")
+sh.dim_linear(M(L, -Rh), M(L, Rh), (1, 0), 14, "⌀72")
+# длина 76,8: выносные от нижних точек фланца и ступицы
+y_dim = -Rf - 14
+sh.line(M(0, -Rf), M(0, y_dim - 2))
+sh.line(M(L, -Rh), M(L, y_dim - 2))
+sh.line(M(0, y_dim), M(L, y_dim))
+sh.arrow(M(0, y_dim), (-1, 0))
+sh.arrow(M(L, y_dim), (1, 0))
+sh.text(M(L / 2, y_dim + 1), "76,8", ha="center")
+# толщина фланца 12
+y12 = Rf + 8
+sh.line(M(0, Rf), M(0, y12 + 2))
+sh.line(M(T_FL, Rf), M(T_FL, y12 + 2))
+sh.line(M(0, y12), M(T_FL, y12))
+sh.arrow(M(0, y12), (-1, 0))
+sh.arrow(M(T_FL, y12), (1, 0))
+sh.text(M(T_FL / 2, y12 + 1), "12", ha="center")
+# обозначение шлицевого профиля
+sh.leader(M(30, Rd), M(46, Rf + 10), 36, "d-8×42H7×48H12×8D9")
+# фаски
+sh.leader(M(CH * 0.55, -(Rd + CH * 0.45)), M(16, -Rf - 6), 34, "2 фаски 1×45°")
+
+# след секущей плоскости А-А
+xc = 70.0
+for s in (1, -1):
+    sh.line(M(xc, s * (Rh + 3)), M(xc, s * (Rh + 14)), "cut")
+    ya = s * (Rh + 12)
+    sh.line(M(xc, ya), M(xc - 9, ya), "thin")
+    sh.arrow(M(xc - 9, ya), (-1, 0), length=4.0, width=1.4)
+    sh.text(M(xc - 5, ya + (1.5 if s > 0 else -6.5)), "А", h=5, ha="center")
+
+# ---- разрез А-А, 1:1
+CX, CY = 225.0, 190.0
+
+
+def A(p):
+    return (CX + p[0], CY + p[1])
+
+
+sh.text((CX, CY + Rf + 9), "А–А", h=5, ha="center")
+sh.circle((CX, CY), Rf, "main")      # фланец за секущей плоскостью
+sh.circle((CX, CY), Rh, "main")
+sh.pl([A(p) for p in HOLE], "main", closed=True)
+ring = Point(CX, CY).buffer(Rh, 256).difference(affinity.translate(HOLE_POLY, CX, CY))
+sh.hatch(ring)
+sh.line((CX - Rf - 5, CY), (CX + Rf + 5, CY), "center")
+sh.line((CX, CY - Rf - 5), (CX, CY + Rf + 5), "center")
+
+
+def dia_dim(angle_deg, rad, rout, shelf, text, to_right):
+    a = math.radians(angle_deg)
+    u = (math.cos(a), math.sin(a))
+    p1 = (CX - u[0] * rad, CY - u[1] * rad)
+    p2 = (CX + u[0] * rad, CY + u[1] * rad)
+    p3 = (CX + u[0] * rout, CY + u[1] * rout)
+    sh.line(p1, p3)
+    sh.arrow(p1, (-u[0], -u[1]))
+    sh.arrow(p2, u)
+    end = (p3[0] + (shelf if to_right else -shelf), p3[1])
+    sh.line(p3, end)
+    sh.text((min(p3[0], end[0]) + 1, p3[1] + 1), text)
+
+
+dia_dim(45.0, RD, Rf + 10, 14, "⌀48", True)
+dia_dim(157.5, Rd, Rf + 12, 14, "⌀42", False)
+
+# обозначение выносного элемента Б
+PB = (0.0, (Rd + RD) / 2)
+RB = 9.0
+sh.circle(A(PB), RB, "thin")
+kb = (A(PB)[0] - RB * 0.5, A(PB)[1] + RB * 0.866)
+sh.line(kb, (kb[0] - 12, kb[1] + 22))
+sh.line((kb[0] - 12, kb[1] + 22), (kb[0] - 20, kb[1] + 22))
+sh.text((kb[0] - 16, kb[1] + 23), "Б", h=5, ha="center")
+
+# ---- выносной элемент Б (5:1)
+K = 5.0
+C3 = (352.0, 195.0)
+
+
+def Bx(p):
+    return (C3[0] + K * (p[0] - PB[0]), C3[1] + K * (p[1] - PB[1]))
+
+
+sh.text((C3[0], C3[1] + K * RB + 8), "Б (5 : 1)", h=5, ha="center")
+wavy = Polygon([(C3[0] + (K * RB + 0.7 * math.sin(14 * t)) * math.cos(t),
+                 C3[1] + (K * RB + 0.7 * math.sin(14 * t)) * math.sin(t))
+                for t in [2 * math.pi * i / 720 for i in range(720)]])
+sh.pl(list(wavy.exterior.coords), "thin", closed=True)
+hole_B = affinity.affine_transform(HOLE_POLY, [K, 0, 0, K, C3[0] - K * PB[0], C3[1] - K * PB[1]])
+for seg in iter_lines(LineString(list(hole_B.exterior.coords)).intersection(wavy)):
+    sh.pl(list(seg.coords), "main")
+sh.hatch(wavy.difference(hole_B))
+sh.line((C3[0], C3[1] - K * RB - 3), (C3[0], C3[1] + K * RB + 3), "center")
+# размер b = 8 (внутри отверстия)
+yb_corner = math.sqrt(Rd ** 2 - (b / 2) ** 2)
+pL, pR = Bx((-b / 2, yb_corner + c)), Bx((b / 2, yb_corner + c))
+yb = C3[1] - 25
+sh.line(pL, (pL[0], yb - 2))
+sh.line(pR, (pR[0], yb - 2))
+sh.line((pL[0], yb), (pR[0], yb))
+sh.arrow((pL[0], yb), (-1, 0))
+sh.arrow((pR[0], yb), (1, 0))
+sh.text((C3[0] - 5, yb + 1), "8", ha="center")
+# R0,3 в углу паза у D
+vc = b / 2 - r
+uc = math.sqrt((RD - r) ** 2 - vc ** 2)
+fil = Bx((vc + r * 0.707, uc + r * 0.707))
+sh.leader(fil, (C3[0] + 38, C3[1] + 36), 14, "R0,3")
+# фаска c у d
+chp = Bx((b / 2 + c / 2, yb_corner + c / 2))
+sh.leader(chp, (C3[0] + 34, C3[1] - 34), 22, "0,4×45°")
+
+# ---- технические требования
+mass = (Point(0, 0).buffer(Rf, 512).difference(HOLE_POLY).area * T_FL
+        + Point(0, 0).buffer(Rh, 512).difference(HOLE_POLY).area * (L - T_FL)) * DENSITY
+tt = [
+    "1. Соединение шлицевое прямобочное, средняя серия,",
+    "    ГОСТ 1139-80: z = 8, d = 42, D = 48, b = 8;",
+    "    центрирование по внутреннему диаметру d.",
+    "2. Неуказанные предельные отклонения размеров:",
+    "    H14, h14, ±IT14/2.",
+    "3. Острые кромки притупить.",
+]
+for i, s in enumerate(tt):
+    sh.text((240, 125 - i * 7), s, h=3.5)
+
+# ---- основная надпись (ГОСТ 2.104, форма 1), 185 x 55
+TX, TY = 415 - 185, 5
+
+
+def T(x, y):
+    return (TX + x, TY + y)
+
+
+sh.pl([T(0, 0), T(185, 0), T(185, 55), T(0, 55)], "main", closed=True)
+for x in (7, 17, 40, 55, 65):
+    sh.line(T(x, 55), T(x, 0) if x in (17, 40, 55, 65) else T(x, 30), "main")
+sh.line(T(7, 30), T(7, 55), "main")
+for y in (5, 10, 15, 20, 25, 30, 35, 40, 45, 50):
+    lt = "main" if y in (30, 35) else "thin"
+    sh.line(T(0, y), T(65, y), lt)
+sh.line(T(65, 40), T(185, 40), "main")
+sh.line(T(65, 15), T(185, 15), "main")
+sh.line(T(135, 40), T(135, 0), "main")
+sh.line(T(135, 35), T(185, 35), "main")
+sh.line(T(135, 20), T(185, 20), "main")
+sh.line(T(150, 40), T(150, 20), "main")
+sh.line(T(167, 40), T(167, 20), "main")
+sh.line(T(140, 35), T(140, 20), "thin")
+sh.line(T(145, 35), T(145, 20), "thin")
+sh.line(T(155, 20), T(155, 15), "main")
+for x, s in ((3.5, "Изм."), (12, "Лист"), (28.5, "№ докум."), (47.5, "Подп."), (60, "Дата")):
+    sh.text(T(x, 31.4), s, h=2.0, ha="center")
+for i, s in enumerate(("Разраб.", "Пров.", "Т.контр.", "", "Н.контр.", "Утв.")):
+    if s:
+        sh.text(T(1, 26.2 - 5 * i), s, h=2.5)
+sh.text(T(142.5, 36.2), "Лит.", h=2.5, ha="center")
+sh.text(T(158.5, 36.2), "Масса", h=2.5, ha="center")
+sh.text(T(176, 36.4), "Масштаб", h=2.1, ha="center")
+sh.text(T(137.5, 24.5), "У", h=5, ha="center")
+sh.text(T(158.5, 24.5), f"{mass / 1000:.2f}".replace(".", ","), h=5, ha="center")
+sh.text(T(176, 24.5), "1:1", h=5, ha="center")
+sh.text(T(137, 16.2), "Лист 1", h=2.5)
+sh.text(T(157, 16.2), "Листов 1", h=2.5)
+sh.text(T(125, 44.5), f"ЛР7.{VAR:02d}.00.001", h=7, ha="center")
+sh.text(T(100, 30), "Втулка шлицевая", h=5, ha="center")
+sh.text(T(100, 9.5), "Сталь 08 ГОСТ 1050-2013", h=3.5, ha="center")
+sh.text(T(160, 6), f"Вариант {VAR}", h=3.5, ha="center")
+
+# ---------------------------------------------------------------- вывод: PDF / PNG
+plt.rcParams["lines.scale_dashes"] = False
+MM2PT = 72 / 25.4
+LW = {"main": S_MAIN, "thin": S_THIN, "center": S_THIN, "cut": S_CUT}
+DASH = {"center": (0, (12 * MM2PT, 1.5 * MM2PT, 0.6 * MM2PT, 1.5 * MM2PT))}
+
+
+def render_mpl(path_pdf, path_png):
+    fig = plt.figure(figsize=(W / 25.4, H / 25.4))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, W)
+    ax.set_ylim(0, H)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    for it in sh.items:
+        kind = it[0]
+        if kind == "pl":
+            pts, lt, closed = it[1], it[2], it[3]
+            if closed:
+                pts = pts + [pts[0]]
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, color="black", lw=LW[lt] * MM2PT,
+                    linestyle=DASH.get(lt, "solid"), solid_capstyle="butt",
+                    solid_joinstyle="miter")
+        elif kind == "circle":
+            pts = circle_pts(it[1], it[2]) + [circle_pts(it[1], it[2])[0]]
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, color="black", lw=LW[it[3]] * MM2PT)
+        elif kind == "fill":
+            ax.add_patch(MplPolygon(it[1], closed=True, color="black", lw=0))
+        elif kind == "text":
+            _, p, s, h, ang, ha, va = it
+            ax.text(p[0], p[1], s, fontsize=h / 0.729 * MM2PT, rotation=ang,
+                    ha=ha, va="baseline" if va == "bottom" else va,
+                    rotation_mode="anchor", family="DejaVu Sans", style="italic")
+    fig.savefig(path_pdf)
+    fig.savefig(path_png, dpi=200)
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------- вывод: DXF
+def render_dxf(path):
+    doc = ezdxf.new("R2010", setup=True)
+    doc.units = ezdxf.units.MM
+    doc.header["$LTSCALE"] = 1.0
+    doc.linetypes.add("GOST_AXIS", pattern=[15.6, 12.0, -1.5, 0.6, -1.5],
+                      description="Осевая ___ . ___ . ___")
+    doc.styles.add("GOST", font="isocpeur.ttf")
+    layers = {
+        "main": ("Основная", "CONTINUOUS", 70),
+        "thin": ("Тонкая", "CONTINUOUS", 25),
+        "center": ("Осевая", "GOST_AXIS", 25),
+        "cut": ("Разомкнутая", "CONTINUOUS", 100),
+    }
+    for name, lt, lw in layers.values():
+        doc.layers.add(name, linetype=lt, lineweight=lw)
+    doc.layers.add("Текст", lineweight=25)
+    msp = doc.modelspace()
+    align = {("left", "bottom"): TextEntityAlignment.BOTTOM_LEFT,
+             ("center", "bottom"): TextEntityAlignment.BOTTOM_CENTER,
+             ("right", "bottom"): TextEntityAlignment.BOTTOM_RIGHT,
+             ("center", "center"): TextEntityAlignment.MIDDLE_CENTER}
+    for it in sh.items:
+        kind = it[0]
+        if kind == "pl":
+            pts, lt, closed = it[1], it[2], it[3]
+            if len(pts) == 2 and not closed:
+                msp.add_line(pts[0], pts[1], dxfattribs={"layer": layers[lt][0]})
+            else:
+                msp.add_lwpolyline(pts, close=closed, dxfattribs={"layer": layers[lt][0]})
+        elif kind == "circle":
+            msp.add_circle(it[1], it[2], dxfattribs={"layer": layers[it[3]][0]})
+        elif kind == "fill":
+            hatch = msp.add_hatch(color=7, dxfattribs={"layer": "Тонкая"})
+            hatch.paths.add_polyline_path(it[1], is_closed=True)
+        elif kind == "text":
+            _, p, s, h, ang, ha, va = it
+            t = msp.add_text(s, height=h, rotation=ang,
+                             dxfattribs={"layer": "Текст", "style": "GOST", "oblique": 15})
+            t.set_placement(p, align=align[(ha, va)])
+    doc.saveas(path)
+
+
+if __name__ == "__main__":
+    render_mpl(OUT / "vtulka_v19.pdf", OUT / "vtulka_v19.png")
+    render_dxf(OUT / "vtulka_v19.dxf")
+    print(f"Масса ≈ {mass:.0f} г")
