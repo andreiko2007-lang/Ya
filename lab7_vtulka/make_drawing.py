@@ -1,8 +1,8 @@
 """Чертёж шлицевой втулки, ЛР №7, вариант 19 (ГОСТ 1139-80, средняя серия).
 
 Строит один и тот же набор примитивов в два формата:
-  * vtulka_v19.pdf / .png — для просмотра и печати (формат А2, масштаб 2:1);
-  * vtulka_v19.dxf        — для открытия в КОМПАС-3D / AutoCAD (лист А2 в мм, изображения 2:1).
+  * vtulka_v19.pdf / .png — для просмотра и печати (формат А4, масштаб 1:1);
+  * vtulka_v19.dxf        — для открытия в КОМПАС-3D / AutoCAD (масштаб 1:1, мм).
 
 Запуск:  python3 make_drawing.py
 Зависимости: matplotlib, ezdxf, shapely.
@@ -36,7 +36,7 @@ DENSITY = 7.85e-3      # г/мм^3, сталь 08
 
 # ---------------------------------------------------------------- примитивы
 S_MAIN, S_THIN, S_CUT = 0.7, 0.25, 1.0   # толщины линий, мм
-HATCH_STEP = 3.0
+HATCH_STEP = 2.5
 FONT = FontProperties(family="DejaVu Sans", style="italic")
 CAP = 0.729                              # высота прописной буквы / кегль (DejaVu Sans)
 
@@ -204,17 +204,17 @@ HOLE_POLY = Polygon(HOLE)
 
 # ---------------------------------------------------------------- лист
 sh = Sheet()
-W, H = 594.0, 420.0            # формат А2
-S = 2.0                        # масштаб главного вида и разреза 2:1
+W, H = 297.0, 210.0            # формат А4 (альбомный)
+S = 1.0                        # масштаб главного вида и разреза 1:1
 
 # рамка
 sh.pl([(0, 0), (W, 0), (W, H), (0, H)], "thin", closed=True)
 sh.pl([(20, 5), (W - 5, 5), (W - 5, H - 5), (20, H - 5)], "main", closed=True)
-sh.text((W - 5, 1.2), "Формат А2", h=2.5, ha="right")
-sh.text((W - 175, 1.2), "Копировал", h=2.5, ha="left")
+sh.text((W - 5, 1.2), "Формат А4", h=2.5, ha="right")
+sh.text((W - 160, 1.2), "Копировал", h=2.5, ha="left")
 
-# ---- главный вид: фронтальный разрез (плоскость симметрии), 2:1
-X0, Y0 = 70.0, 260.0
+# ---- главный вид: фронтальный разрез (плоскость симметрии), 1:1
+X0, Y0 = 40.0, 140.0
 
 
 def M(x, y):
@@ -238,7 +238,7 @@ sh.line((X0 - 6, Y0), (M(L, 0)[0] + 6, Y0), "center")
 sh.dim_linear(M(0, -Rf), M(0, Rf), (-1, 0), 14, "⌀96")
 sh.dim_linear(M(L, -Rh), M(L, Rh), (1, 0), 14, "⌀72")
 # длина 76,8: выносные от нижних точек фланца и ступицы
-y_dim = M(0, -Rf)[1] - 18
+y_dim = M(0, -Rf)[1] - 14
 sh.line(M(0, -Rf), (M(0, 0)[0], y_dim - 2))
 sh.line(M(L, -Rh), (M(L, 0)[0], y_dim - 2))
 sh.line((M(0, 0)[0], y_dim), (M(L, 0)[0], y_dim))
@@ -254,9 +254,9 @@ sh.arrow((M(0, 0)[0], y12), (-1, 0))
 sh.arrow((M(T_FL, 0)[0], y12), (1, 0))
 sh.text((M(T_FL / 2, 0)[0], y12 + 1), "12", ha="center")
 # обозначение шлицевого профиля
-sh.leader(M(30, Rd), (M(46, 0)[0], M(0, Rf)[1] + 12), 36, "d-8×42H7×48H12×8D9")
+sh.leader(M(30, Rd), (M(46, 0)[0], M(0, Rf)[1] + 10), 36, "d-8×42H7×48H12×8D9")
 # фаски
-sh.leader(M(CH * 0.55, -(Rd + CH * 0.45)), (M(16, 0)[0], M(0, -Rf)[1] - 8), 34, "2 фаски 1×45°")
+sh.leader(M(CH * 0.55, -(Rd + CH * 0.45)), (M(16, 0)[0], M(0, -Rf)[1] - 6), 34, "2 фаски 1×45°")
 
 # след секущей плоскости А-А
 xc = M(70.0, 0)[0]
@@ -269,8 +269,8 @@ for s in (1, -1):
     sh.arrow((xc - 9, ya), (-1, 0), length=4.0, width=1.4)
     sh.text((xc - 5, ya + (1.5 if s > 0 else -6.5)), "А", h=5, ha="center")
 
-# ---- разрез А-А, 2:1
-CX, CY = 390.0, Y0
+# ---- разрез А-А, 1:1
+CX, CY = 190.0, Y0
 
 
 def A(p):
@@ -285,7 +285,7 @@ hole_A = affinity.affine_transform(HOLE_POLY, [S, 0, 0, S, CX, CY])
 ring = Point(CX, CY).buffer(S * Rh, 256).difference(hole_A)
 sh.hatch(ring)
 sh.line((CX - S * Rf - 5, CY), (CX + S * Rf + 5, CY), "center")
-sh.line((CX, CY - S * Rf - 5), (CX, CY + S * Rf + 5), "center")
+sh.line((CX, CY - S * Rf - 3), (CX, CY + S * Rf + 5), "center")
 
 
 def dia_dim(angle_deg, rad, rout, shelf, text, to_right):
@@ -305,30 +305,30 @@ def dia_dim(angle_deg, rad, rout, shelf, text, to_right):
 
 
 dia_dim(45.0, RD, S * Rf + 10, 14, "⌀48", True)
-dia_dim(157.5, Rd, S * Rf + 12, 14, "⌀42", False)
+dia_dim(-22.5, Rd, S * Rf + 12, 14, "⌀42", True)
 
 # обозначение выносного элемента Б
 PB = (0.0, (Rd + RD) / 2)
-RB = 9.0                                  # радиус зоны элемента, мм детали
+RB = 6.0                                  # радиус зоны элемента, мм детали
 sh.circle(A(PB), S * RB, "thin")
 kb = (A(PB)[0] - S * RB * 0.5, A(PB)[1] + S * RB * 0.866)
-kn = (kb[0] - 20, kb[1] + 45)
+kn = (kb[0] - 12, kb[1] + 22)
 sh.line(kb, kn)
 sh.line(kn, (kn[0] - 8, kn[1]))
 sh.text((kn[0] - 4, kn[1] + 1), "Б", h=5, ha="center")
 
-# ---- выносной элемент Б (5:1)
-K = 5.0
-C3 = (300.0, 100.0)
+# ---- выносной элемент Б (4:1)
+K = 4.0
+C3 = (55.0, 31.0)
 
 
 def Bx(p):
     return (C3[0] + K * (p[0] - PB[0]), C3[1] + K * (p[1] - PB[1]))
 
 
-sh.text((C3[0], C3[1] + K * RB + 8), "Б (5 : 1)", h=5, ha="center")
-wavy = Polygon([(C3[0] + (K * RB + 0.7 * math.sin(14 * t)) * math.cos(t),
-                 C3[1] + (K * RB + 0.7 * math.sin(14 * t)) * math.sin(t))
+sh.text((C3[0], C3[1] + K * RB + 5), "Б (4 : 1)", h=5, ha="center")
+wavy = Polygon([(C3[0] + (K * RB + 0.5 * math.sin(12 * t)) * math.cos(t),
+                 C3[1] + (K * RB + 0.5 * math.sin(12 * t)) * math.sin(t))
                 for t in [2 * math.pi * i / 720 for i in range(720)]])
 sh.pl(list(wavy.exterior.coords), "thin", closed=True)
 hole_B = affinity.affine_transform(HOLE_POLY, [K, 0, 0, K, C3[0] - K * PB[0], C3[1] - K * PB[1]])
@@ -339,7 +339,7 @@ sh.line((C3[0], C3[1] - K * RB - 3), (C3[0], C3[1] + K * RB + 3), "center")
 # размер b = 8 (внутри отверстия)
 yb_corner = math.sqrt(Rd ** 2 - (b / 2) ** 2)
 pL, pR = Bx((-b / 2, yb_corner + c)), Bx((b / 2, yb_corner + c))
-yb = C3[1] - 25
+yb = C3[1] - 15
 sh.line(pL, (pL[0], yb - 2))
 sh.line(pR, (pR[0], yb - 2))
 sh.line((pL[0], yb), (pR[0], yb))
@@ -350,24 +350,22 @@ sh.text((C3[0] - 5, yb + 1), "8", ha="center")
 vc = b / 2 - r
 uc = math.sqrt((RD - r) ** 2 - vc ** 2)
 fil = Bx((vc + r * 0.707, uc + r * 0.707))
-sh.leader(fil, (C3[0] + 38, C3[1] + 36), 14, "R0,3")
+sh.leader(fil, (C3[0] + 30, C3[1] + 24), 12, "R0,3")
 # фаска c у d
 chp = Bx((b / 2 + c / 2, yb_corner + c / 2))
-sh.leader(chp, (C3[0] + 34, C3[1] - 34), 22, "0,4×45°")
+sh.leader(chp, (C3[0] + 28, C3[1] - 20), 12, "0,4×45°")
 
 # ---- технические требования
 mass = (Point(0, 0).buffer(Rf, 512).difference(HOLE_POLY).area * T_FL
         + Point(0, 0).buffer(Rh, 512).difference(HOLE_POLY).area * (L - T_FL)) * DENSITY
 tt = [
-    "1. Соединение шлицевое прямобочное, средняя серия,",
-    "    ГОСТ 1139-80: z = 8, d = 42, D = 48, b = 8;",
-    "    центрирование по внутреннему диаметру d.",
-    "2. Неуказанные предельные отклонения размеров:",
-    "    H14, h14, ±IT14/2.",
-    "3. Острые кромки притупить.",
+    "1. Соединение шлицевое прямобочное, средняя серия, ГОСТ 1139-80.",
+    "2. Центрирование по внутреннему диаметру d.",
+    "3. Неуказанные предельные отклонения размеров: H14, h14, ±IT14/2.",
+    "4. Острые кромки притупить.",
 ]
 for i, s in enumerate(tt):
-    sh.text((W - 180, 125 - i * 7), s, h=3.5)
+    sh.text((124, 82 - i * 6), s, h=3.5, fit=W - 5 - 126)
 
 # ---- основная надпись (ГОСТ 2.104, форма 1), 185 x 55
 TX, TY = W - 5 - 185, 5
@@ -400,12 +398,14 @@ for x, w, s in ((3.5, 7, "Изм."), (12, 10, "Лист"), (28.5, 23, "№ до�
 for i, s in enumerate(("Разраб.", "Пров.", "Т.контр.", "", "Н.контр.", "Утв.")):
     if s:
         sh.text(T(1.0, 26.2 - 5 * i), s, h=2.5, fit=14.4)
+for i, s in enumerate(("Шлейко И. Ю.", "Кулькова В. В.")):
+    sh.text(T(18.0, 26.2 - 5 * i), s, h=2.5, fit=21.0)
 sh.text(T(142.5, 36.2), "Лит.", h=2.5, ha="center", fit=12.5)
 sh.text(T(158.5, 36.2), "Масса", h=2.5, ha="center", fit=14.5)
 sh.text(T(176, 36.2), "Масштаб", h=2.5, ha="center", fit=15.0)
 sh.text(T(137.5, 25.8), "У", h=3.5, ha="center", fit=3.0)
 sh.text(T(158.5, 25.2), f"{mass / 1000:.2f}".replace(".", ","), h=5, ha="center", fit=14)
-sh.text(T(176, 25.2), "2:1", h=5, ha="center", fit=15)
+sh.text(T(176, 25.2), "1:1", h=5, ha="center", fit=15)
 sh.text(T(136.5, 16.2), "Лист 1", h=2.5, fit=18)
 sh.text(T(157, 16.2), "Листов 1", h=2.5, fit=27)
 sh.text(T(125, 44.5), f"ЛР7.{VAR:02d}.00.001", h=7, ha="center", fit=116)
