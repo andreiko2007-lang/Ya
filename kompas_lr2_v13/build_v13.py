@@ -1,7 +1,7 @@
 """Лабораторная работа №2, вариант 13 — чертёж фланца с квадратным отверстием.
 
 Генерирует DXF (AutoCAD 2010), который открывается в КОМПАС-3D через
-«Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А4 (альбомный).
+«Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А4 (книжный).
 
 Запуск:  python build_v13.py   (нужен пакет ezdxf)
 """
@@ -63,11 +63,18 @@ SQ = "□"
 
 
 # ---------------------------------------------------------------- помощники
-def mk(ox, oy):
-    """Функции рисования в локальной системе вида с началом (ox, oy)."""
+def mk(ox, oy, rot=0):
+    """Функции рисования в локальной системе вида с началом (ox, oy),
+    повёрнутой на rot градусов (0 или 90) против часовой стрелки."""
+    ca, sa = round(math.cos(math.radians(rot))), round(math.sin(math.radians(rot)))
 
     def P(x, y):
-        return (ox + x, oy + y)
+        return (ox + x * ca - y * sa, oy + x * sa + y * ca)
+
+    def nrot(a):
+        """Направление текста/размера без перевёрнутых надписей."""
+        a = (a + rot) % 360
+        return a - 180 if 90 < a <= 270 else a
 
     def line(x1, y1, x2, y2, layer="Основная"):
         msp.add_line(P(x1, y1), P(x2, y2), dxfattribs={"layer": layer})
@@ -79,7 +86,7 @@ def mk(ox, oy):
         msp.add_circle(P(x, y), r, dxfattribs={"layer": layer})
 
     def arc(x, y, r, a1, a2, layer="Основная"):
-        msp.add_arc(P(x, y), r, a1, a2, dxfattribs={"layer": layer})
+        msp.add_arc(P(x, y), r, a1 + rot, a2 + rot, dxfattribs={"layer": layer})
 
     def hatch(pts, angle=45, spacing=2.0):
         h = msp.add_hatch(dxfattribs={"layer": "Штриховка"})
@@ -87,25 +94,26 @@ def mk(ox, oy):
         h.paths.add_polyline_path([P(*p) for p in pts], is_closed=True)
 
     def dim_lin(p1, p2, base, angle=0, text="<>"):
-        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=angle,
+        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=(angle + rot) % 180,
                                text=text, dimstyle="ГОСТ", dxfattribs={"layer": "Размеры"})
         d.render()
 
     def dim_dia(cx, cy, r, ang, text="<>", loc=None):
-        kw = {"location": P(*loc)} if loc else {"angle": ang}
+        kw = {"location": P(*loc)} if loc else {"angle": ang + rot}
         d = msp.add_diameter_dim(center=P(cx, cy), radius=r, text=text, **kw,
                                  dimstyle="ГОСТ", override={"dimtmove": 1},
                                  dxfattribs={"layer": "Размеры"})
         d.render()
 
     def dim_rad(cx, cy, r, ang, text="<>"):
-        d = msp.add_radius_dim(center=P(cx, cy), radius=r, angle=ang, text=text,
+        d = msp.add_radius_dim(center=P(cx, cy), radius=r, angle=ang + rot, text=text,
                                dimstyle="ГОСТ", override={"dimtmove": 1},
                                dxfattribs={"layer": "Размеры"})
         d.render()
 
     def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0, width=0.8):
-        t = msp.add_text(s, height=h, rotation=rot,
+        rot_t = rot
+        t = msp.add_text(s, height=h, rotation=nrot(rot_t),
                          dxfattribs={"layer": layer, "style": "GOST", "width": width})
         t.set_placement(P(x, y), align=align)
 
@@ -146,8 +154,9 @@ X_THR = L - THR_L        # 35
 
 # ================================================================ ГЛАВНЫЙ ВИД
 # (соединение половины вида и половины фронтального разреза)
-MX, MY = 182.0, 127.0
-P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY)
+# ось детали вертикальна: фланец внизу, вид слева от оси, разрез справа
+MX, MY = 112.0, 190.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY, 90)
 
 # --- верхняя половина: вид
 poly([(0, 0), (0, FL_H), (T_FL, FL_H), (T_FL, R_OUT), (L - CH_OUT, R_OUT),
@@ -219,9 +228,9 @@ dim_lin((0, yc - HOLE_R - HOLE_CH), (HOLE_CH, yc - HOLE_R), (-10, -FL_H - 8),
         text="1,5×45°")
 
 # ================================================================ ВИД СПРАВА
-# по ГОСТ 2.305 располагается слева от главного вида
-SX, SY = 98.0, 127.0
-P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY)
+# вид сверху — по ГОСТ 2.305 располагается под главным видом
+SX, SY = 112.0, 122.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY, 90)
 
 # фланец: восьмиугольник 60×80 со скосами и двумя пазами R5
 for s in (1, -1):
@@ -263,13 +272,13 @@ dim_rad(0, SLOT_C, SLOT_R, 300, text="R5")
 
 # ================================================================ РАМКА А4 И ОСНОВНАЯ НАДПИСЬ
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
-poly([(0, 0), (297, 0), (297, 210), (0, 210)], "Рамка_тонкая", closed=True)
-poly([(20, 5), (292, 5), (292, 205), (20, 205)], "Рамка", closed=True)
+poly([(0, 0), (210, 0), (210, 297), (0, 297)], "Рамка_тонкая", closed=True)
+poly([(20, 5), (205, 5), (205, 292), (20, 292)], "Рамка", closed=True)
 
-TX, TY = 292 - 185, 5  # левый нижний угол основной надписи (форма 1, ГОСТ 2.104)
+TX, TY = 205 - 185, 5  # левый нижний угол основной надписи (форма 1, ГОСТ 2.104)
 B = "Рамка"
 T = "Рамка_тонкая"
-poly([(TX, TY), (TX, TY + 55), (292, TY + 55)], B)
+poly([(TX, TY), (TX, TY + 55), (205, TY + 55)], B)
 # вертикали (графы по ГОСТ 2.104, форма 1)
 for x, y1, y2, lay in [(7, 30, 55, B), (17, 0, 55, B), (40, 0, 55, B), (55, 0, 55, B),
                        (65, 0, 55, B), (135, 0, 40, B), (140, 20, 35, T), (145, 20, 35, T),
@@ -298,7 +307,8 @@ tb(0.6, 6.2, "Н.контр."); tb(0.6, 1.2, "Утв.")
 tb(142.5, 37.5, "Лит.", align=C); tb(158.5, 37.5, "Масса", align=C); tb(176, 37.5, "Масштаб", align=C)
 tb(136, 16.2, "Лист"); tb(156, 16.2, "Листов")
 tb(17.6, 26.2, "Плахов Р. Д."); tb(17.6, 21.2, "Кулькова В. В.")
-tb(125, 47.5, "Лаб. Работа №2", h=5, align=C)
+tb(100, 27.5, "Лаб. раб. №2", h=7, align=C)
+tb(160, 7.5, "ВФ МЭИ гр. ИВТ-2-26", h=3.5, align=C)
 tb(176, 27.5, "1:1", h=5, align=C); tb(180, 17.5, "1", h=3.5, align=C)
 
 # дополнительные графы 19–23 и 24–25 на поле подшивки (ГОСТ 2.104)
@@ -310,14 +320,16 @@ for hgt, cap in [(25, "Инв. № подл."), (35, "Подп. и дата"), (
     line(8, y + hgt, 20, y + hgt, B)
     text(10.5, y + hgt / 2, cap, h=3, layer=T, align=CC, rot=90, width=0.7)
     y += hgt
-# графа «Справ. №» (60 мм от отметки 172) обрезается краем листа, как в шаблоне КОМПАС
-line(8, 172, 8, 210, B); line(13, 172, 13, 210, B); line(8, 172, 20, 172, B)
-text(10.5, 196, "Справ. №", h=3, layer=T, align=CC, rot=90, width=0.7)
+line(8, 172, 8, 292, B); line(13, 172, 13, 292, B)
+for yy in (172, 232, 292):
+    line(8, yy, 20, yy, B)
+text(10.5, 262, "Перв. примен.", h=3, layer=T, align=CC, rot=90, width=0.7)
+text(10.5, 202, "Справ. №", h=3, layer=T, align=CC, rot=90, width=0.7)
 # графа 26 (обозначение документа, повернутое) в левом верхнем углу
-poly([(20, 191), (90, 191), (90, 205)], B)
+poly([(20, 278), (90, 278), (90, 292)], B)
 # надписи под рамкой
-text(183, 1, "Копировал", h=3, layer=T, width=0.8)
-text(253, 1, "Формат  А4", h=3, layer=T, width=0.8)
+text(96, 1, "Копировал", h=3, layer=T, width=0.8)
+text(166, 1, "Формат  А4", h=3, layer=T, width=0.8)
 
 doc.saveas(OUT)
 print("saved", OUT)
