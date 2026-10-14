@@ -177,11 +177,12 @@ line(0, -(LUG_C - R_LUG_HOLE), T_FL, -(LUG_C - R_LUG_HOLE))
 line(0, -(LUG_C + R_LUG_HOLE), T_FL, -(LUG_C + R_LUG_HOLE))
 # резьбовое отверстие M12 (в разрезе)
 yc = -M12_Y
-line(0, yc + M12_R + M12_CH, M12_CH, yc + M12_R)       # фаска
-line(0, yc - M12_R - M12_CH, M12_CH, yc - M12_R)
-line(M12_CH, yc + M12_R, M12_CH, yc - M12_R)
-line(M12_CH, yc + M12_RMIN, M12_DRILL, yc + M12_RMIN)   # внутр. Ø резьбы
-line(M12_CH, yc - M12_RMIN, M12_DRILL, yc - M12_RMIN)
+HCM = M12_R + M12_CH - M12_RMIN   # фаска 45° доходит до внутреннего Ø резьбы
+line(0, yc + M12_R + M12_CH, HCM, yc + M12_RMIN)        # фаска
+line(0, yc - M12_R - M12_CH, HCM, yc - M12_RMIN)
+line(HCM, yc + M12_RMIN, HCM, yc - M12_RMIN)
+line(HCM, yc + M12_RMIN, M12_DRILL, yc + M12_RMIN)      # внутр. Ø резьбы
+line(HCM, yc - M12_RMIN, M12_DRILL, yc - M12_RMIN)
 line(M12_DRILL, yc + M12_RMIN, M12_DRILL + CONE, yc)    # конус сверла
 line(M12_DRILL, yc - M12_RMIN, M12_DRILL + CONE, yc)
 line(M12_CH, yc + M12_R, M12_THR, yc + M12_R, "Тонкая")  # наружн. Ø резьбы
@@ -191,9 +192,9 @@ line(M12_THR, yc + M12_R, M12_THR, yc - M12_R)          # граница рез�
 hatch([(0, -R_BORE), (X_GROOVE, -R_BORE), (X_GROOVE, -R_GROOVE), (X_SQ, -R_GROOVE),
        (X_SQ, -SQ_H), (L, -SQ_H), (L, -(R_OUT - CH_OUT)), (L - CH_OUT, -R_OUT),
        (T_FL, -R_OUT), (T_FL, -(LUG_C - R_LUG_HOLE)), (0, -(LUG_C - R_LUG_HOLE)),
-       (0, yc - M12_R - M12_CH), (M12_CH, yc - M12_R), (M12_CH, yc - M12_RMIN),
+       (0, yc - M12_R - M12_CH), (HCM, yc - M12_RMIN),
        (M12_DRILL, yc - M12_RMIN), (M12_DRILL + CONE, yc), (M12_DRILL, yc + M12_RMIN),
-       (M12_CH, yc + M12_RMIN), (M12_CH, yc + M12_R), (0, yc + M12_R + M12_CH)])
+       (HCM, yc + M12_RMIN), (0, yc + M12_R + M12_CH)])
 hatch([(0, -(LUG_C + R_LUG_HOLE)), (T_FL, -(LUG_C + R_LUG_HOLE)),
        (T_FL, -LUG_TOP), (0, -LUG_TOP)])
 # осевые линии

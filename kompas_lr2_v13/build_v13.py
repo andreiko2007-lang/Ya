@@ -151,6 +151,7 @@ CONE = HOLE_RMIN / math.tan(math.radians(59))
 
 X_BORE = L - BORE_D      # 30
 X_THR = L - THR_L        # 35
+X_CHM = L - (M30_R + M30_CH - M30_RMIN)  # фаска 45° доходит до внутреннего Ø резьбы
 
 # ================================================================ ГЛАВНЫЙ ВИД
 # (соединение половины вида и половины фронтального разреза)
@@ -175,23 +176,23 @@ line(0, -(SLOT_C - SLOT_R), T_FL, -(SLOT_C - SLOT_R))
 # квадратное отверстие и отверстие под резьбу М30
 # расточка Ø30 под выход резьбы (x 30…35), далее резьба М30 до торца
 poly([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_R), (X_THR, -M30_R),
-      (X_THR, -M30_RMIN), (L - M30_CH, -M30_RMIN), (L - M30_CH, -M30_R),
-      (L, -(M30_R + M30_CH))])
+      (X_THR, -M30_RMIN), (X_CHM, -M30_RMIN), (L, -(M30_R + M30_CH))])
 # линии видимого контура за секущей плоскостью
 line(0, -SQ_H, 0, 0)                                     # кромка квадратного отверстия
 line(X_BORE, -SQ_H, X_BORE, 0)                           # дно расточки
 line(X_THR, -M30_RMIN, X_THR, 0)                         # начало резьбы
-line(L - M30_CH, -M30_RMIN, L - M30_CH, 0)               # кромка фаски резьбы
+line(X_CHM, -M30_RMIN, X_CHM, 0)                         # кромка фаски резьбы
 line(L, -(M30_R + M30_CH), L, 0)                         # торец
 line(X_THR, -M30_R, L - M30_CH, -M30_R, "Тонкая")         # наружный Ø резьбы
 line(0, 0, SQ_DEPTH, -SQ_H, "Тонкая")                    # плоская грань
 line(0, -SQ_H, SQ_DEPTH, 0, "Тонкая")
 # резьбовое отверстие (в разрезе)
-line(0, yc + HOLE_R + HOLE_CH, HOLE_CH, yc + HOLE_R)
-line(0, yc - HOLE_R - HOLE_CH, HOLE_CH, yc - HOLE_R)
-line(HOLE_CH, yc + HOLE_R, HOLE_CH, yc - HOLE_R)
-line(HOLE_CH, yc + HOLE_RMIN, HOLE_DEPTH, yc + HOLE_RMIN)
-line(HOLE_CH, yc - HOLE_RMIN, HOLE_DEPTH, yc - HOLE_RMIN)
+HCM = HOLE_R + HOLE_CH - HOLE_RMIN   # фаска 45° доходит до внутреннего Ø резьбы
+line(0, yc + HOLE_R + HOLE_CH, HCM, yc + HOLE_RMIN)
+line(0, yc - HOLE_R - HOLE_CH, HCM, yc - HOLE_RMIN)
+line(HCM, yc + HOLE_RMIN, HCM, yc - HOLE_RMIN)
+line(HCM, yc + HOLE_RMIN, HOLE_DEPTH, yc + HOLE_RMIN)
+line(HCM, yc - HOLE_RMIN, HOLE_DEPTH, yc - HOLE_RMIN)
 line(HOLE_DEPTH, yc + HOLE_RMIN, HOLE_DEPTH + CONE, yc)
 line(HOLE_DEPTH, yc - HOLE_RMIN, HOLE_DEPTH + CONE, yc)
 line(HOLE_CH, yc + HOLE_R, HOLE_THR, yc + HOLE_R, "Тонкая")
@@ -199,13 +200,13 @@ line(HOLE_CH, yc - HOLE_R, HOLE_THR, yc - HOLE_R, "Тонкая")
 line(HOLE_THR, yc + HOLE_R, HOLE_THR, yc - HOLE_R)
 # штриховка
 hatch([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_R), (X_THR, -M30_R),
-       (X_THR, -M30_RMIN), (L - M30_CH, -M30_RMIN),
+       (X_THR, -M30_RMIN), (X_CHM, -M30_RMIN),
        (L - M30_CH, -M30_R), (L, -(M30_R + M30_CH)), (L, -(R_OUT - CH_OUT)),
        (L - CH_OUT, -R_OUT), (T_FL, -R_OUT), (T_FL, -(SLOT_C - SLOT_R)),
        (0, -(SLOT_C - SLOT_R)),
-       (0, yc - HOLE_R - HOLE_CH), (HOLE_CH, yc - HOLE_R), (HOLE_CH, yc - HOLE_RMIN),
+       (0, yc - HOLE_R - HOLE_CH), (HCM, yc - HOLE_RMIN),
        (HOLE_DEPTH, yc - HOLE_RMIN), (HOLE_DEPTH + CONE, yc), (HOLE_DEPTH, yc + HOLE_RMIN),
-       (HOLE_CH, yc + HOLE_RMIN), (HOLE_CH, yc + HOLE_R), (0, yc + HOLE_R + HOLE_CH)])
+       (HCM, yc + HOLE_RMIN), (0, yc + HOLE_R + HOLE_CH)])
 # осевые
 line(-5, 0, L + 6, 0, "Осевая")
 line(-4, yc, HOLE_DEPTH + CONE + 3, yc, "Осевая")
