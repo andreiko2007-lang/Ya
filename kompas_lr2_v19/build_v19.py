@@ -163,6 +163,7 @@ line(L - CH_OUT, -R_OUT, L - CH_OUT, -SQ_H)            # кромка фаски
 poly([(0, -R_BORE), (X_GROOVE, -R_BORE), (X_GROOVE, -R_GROOVE), (X_SQ, -R_GROOVE),
       (X_SQ, -SQ_H), (L, -SQ_H)])
 # линии видимого контура за секущей плоскостью
+line(0, -R_BORE, 0, 0)                                   # кромка отверстия Ø14 на торце
 line(X_GROOVE, -R_BORE, X_GROOVE, 0)
 line(X_SQ, -R_GROOVE, X_SQ, 0)
 line(L, -SQ_H, L, -SLOT_H)

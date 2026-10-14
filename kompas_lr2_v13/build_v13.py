@@ -173,10 +173,16 @@ poly([(0, yc - HOLE_R - HOLE_CH), (0, -FL_H), (T_FL, -FL_H), (T_FL, -R_OUT),
 # паз R5 (за секущей плоскостью видна стенка паза)
 line(0, -(SLOT_C - SLOT_R), T_FL, -(SLOT_C - SLOT_R))
 # квадратное отверстие и отверстие под резьбу М30
-poly([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_RMIN), (L - M30_CH, -M30_RMIN),
-      (L - M30_CH, -M30_R), (L, -(M30_R + M30_CH))])
-line(X_BORE, -M30_RMIN, X_BORE, 0)                       # дно расточки за плоскостью
-line(X_THR, -M30_RMIN, X_THR, -M30_R)                    # граница резьбы
+# расточка Ø30 под выход резьбы (x 30…35), далее резьба М30 до торца
+poly([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_R), (X_THR, -M30_R),
+      (X_THR, -M30_RMIN), (L - M30_CH, -M30_RMIN), (L - M30_CH, -M30_R),
+      (L, -(M30_R + M30_CH))])
+# линии видимого контура за секущей плоскостью
+line(0, -SQ_H, 0, 0)                                     # кромка квадратного отверстия
+line(X_BORE, -SQ_H, X_BORE, 0)                           # дно расточки
+line(X_THR, -M30_RMIN, X_THR, 0)                         # начало резьбы
+line(L - M30_CH, -M30_RMIN, L - M30_CH, 0)               # кромка фаски резьбы
+line(L, -(M30_R + M30_CH), L, 0)                         # торец
 line(X_THR, -M30_R, L - M30_CH, -M30_R, "Тонкая")         # наружный Ø резьбы
 line(0, 0, SQ_DEPTH, -SQ_H, "Тонкая")                    # плоская грань
 line(0, -SQ_H, SQ_DEPTH, 0, "Тонкая")
@@ -192,7 +198,8 @@ line(HOLE_CH, yc + HOLE_R, HOLE_THR, yc + HOLE_R, "Тонкая")
 line(HOLE_CH, yc - HOLE_R, HOLE_THR, yc - HOLE_R, "Тонкая")
 line(HOLE_THR, yc + HOLE_R, HOLE_THR, yc - HOLE_R)
 # штриховка
-hatch([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_RMIN), (L - M30_CH, -M30_RMIN),
+hatch([(0, -SQ_H), (SQ_DEPTH, -SQ_H), (X_BORE, -M30_R), (X_THR, -M30_R),
+       (X_THR, -M30_RMIN), (L - M30_CH, -M30_RMIN),
        (L - M30_CH, -M30_R), (L, -(M30_R + M30_CH)), (L, -(R_OUT - CH_OUT)),
        (L - CH_OUT, -R_OUT), (T_FL, -R_OUT), (T_FL, -(SLOT_C - SLOT_R)),
        (0, -(SLOT_C - SLOT_R)),
@@ -222,7 +229,7 @@ text(XD - 1, -4, "M30", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
 dim_lin((L - M30_CH, -(M30_R + M30_CH)), (L, -(M30_R + M30_CH)), (0, -FL_H + 2),
         text="2×45°")
 dim_lin((X_THR, -M30_R), (L, -(M30_R + M30_CH)), (0, -FL_H - 8))        # 20
-dim_lin((X_BORE, -M30_RMIN), (L, -(R_OUT - CH_OUT)), (0, -FL_H - 16))   # 25
+dim_lin((X_BORE, -M30_R), (L, -(R_OUT - CH_OUT)), (0, -FL_H - 16))   # 25
 dim_lin((0, -FL_H), (HOLE_DEPTH, yc - HOLE_RMIN), (0, -FL_H - 16))      # 20
 dim_lin((0, yc - HOLE_R - HOLE_CH), (HOLE_CH, yc - HOLE_R), (-10, -FL_H - 8),
         text="1,5×45°")
