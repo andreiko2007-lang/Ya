@@ -227,7 +227,7 @@ h = msp.add_hatch(color=3, dxfattribs={"layer": "Размеры"})
 h.paths.add_polyline_path([P(XD, -M30_R), P(XD - 0.5, -M30_R + 3), P(XD + 0.5, -M30_R + 3)],
                           is_closed=True)
 text(XD - 1, -4, "M30", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
-dim_lin((L - M30_CH, -(M30_R + M30_CH)), (L, -(M30_R + M30_CH)), (0, -FL_H + 2),
+dim_lin((L - M30_CH, -M30_R), (L, -(M30_R + M30_CH)), (0, -FL_H + 2),
         text="2×45°")
 dim_lin((X_THR, -M30_R), (L, -(M30_R + M30_CH)), (0, -FL_H - 8))        # 20
 dim_lin((X_BORE, -M30_R), (L, -(R_OUT - CH_OUT)), (0, -FL_H - 16))   # 25
