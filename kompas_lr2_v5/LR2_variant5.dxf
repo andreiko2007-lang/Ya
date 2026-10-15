@@ -489,7 +489,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461329.701423611
+2461329.7554050926
   9
 $TDUCREATE
  40
@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461329.701423611
+2461329.7554050926
   9
 $TDUUPDATE
  40
@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-1DC
+1DD
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{C292D950-29AF-4E79-B116-34C7C7E240F6}
+{22FBAC0C-1A67-4B05-B710-32DC213A1253}
   9
 $VERSIONGUID
   2
-{18AA47BB-E9E3-4C84-A86D-BD3FAB342C11}
+{FE2A0D4C-4751-45E8-8A83-A9D9C557C99B}
   9
 $EXTNAMES
 290
@@ -1323,9 +1323,9 @@ ISM
   0
 CLASS
   1
-ACDBPLACEHOLDER
+LAYOUT
   2
-AcDbPlaceHolder
+AcDbLayout
   3
 ObjectDBX Classes
  90
@@ -1339,9 +1339,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-LAYOUT
+ACDBPLACEHOLDER
   2
-AcDbLayout
+AcDbPlaceHolder
   3
 ObjectDBX Classes
  90
@@ -3397,7 +3397,7 @@ ACAD
   0
 APPID
   5
-1D9
+1DA
 330
 3
 100
@@ -3411,7 +3411,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-1DA
+1DB
 330
 3
 100
@@ -12921,6 +12921,40 @@ AcDbText
  10
 37.6
  20
+31.2
+ 30
+0.0
+ 40
+2.5
+  1
+Дмитриев В. В.
+  7
+GOST
+ 41
+0.65
+ 11
+37.6
+ 21
+31.2
+ 31
+0.0
+100
+AcDbText
+  0
+TEXT
+  5
+1BE
+330
+17
+100
+AcDbEntity
+  8
+Рамка_тонкая
+100
+AcDbText
+ 10
+37.6
+ 20
 26.2
  30
 0.0
@@ -12943,7 +12977,7 @@ AcDbText
   0
 TEXT
   5
-1BE
+1BF
 330
 17
 100
@@ -12981,7 +13015,7 @@ AcDbText
   0
 TEXT
   5
-1BF
+1C0
 330
 17
 100
@@ -13019,7 +13053,7 @@ AcDbText
   0
 TEXT
   5
-1C0
+1C1
 330
 17
 100
@@ -13057,7 +13091,7 @@ AcDbText
   0
 TEXT
   5
-1C1
+1C2
 330
 17
 100
@@ -13095,30 +13129,6 @@ AcDbText
   0
 LINE
   5
-1C2
-330
-17
-100
-AcDbEntity
-  8
-Рамка
-100
-AcDbLine
- 10
-8.0
- 20
-5.0
- 30
-0.0
- 11
-8.0
- 21
-150.0
- 31
-0.0
-  0
-LINE
-  5
 1C3
 330
 17
@@ -13129,6 +13139,30 @@ AcDbEntity
 100
 AcDbLine
  10
+8.0
+ 20
+5.0
+ 30
+0.0
+ 11
+8.0
+ 21
+150.0
+ 31
+0.0
+  0
+LINE
+  5
+1C4
+330
+17
+100
+AcDbEntity
+  8
+Рамка
+100
+AcDbLine
+ 10
 13.0
  20
 5.0
@@ -13143,7 +13177,7 @@ AcDbLine
   0
 LINE
   5
-1C4
+1C5
 330
 17
 100
@@ -13167,7 +13201,7 @@ AcDbLine
   0
 LINE
   5
-1C5
+1C6
 330
 17
 100
@@ -13191,7 +13225,7 @@ AcDbLine
   0
 TEXT
   5
-1C6
+1C7
 330
 17
 100
@@ -13231,7 +13265,7 @@ AcDbText
   0
 LINE
   5
-1C7
+1C8
 330
 17
 100
@@ -13255,7 +13289,7 @@ AcDbLine
   0
 TEXT
   5
-1C8
+1C9
 330
 17
 100
@@ -13295,7 +13329,7 @@ AcDbText
   0
 LINE
   5
-1C9
+1CA
 330
 17
 100
@@ -13319,7 +13353,7 @@ AcDbLine
   0
 TEXT
   5
-1CA
+1CB
 330
 17
 100
@@ -13359,7 +13393,7 @@ AcDbText
   0
 LINE
   5
-1CB
+1CC
 330
 17
 100
@@ -13383,7 +13417,7 @@ AcDbLine
   0
 TEXT
   5
-1CC
+1CD
 330
 17
 100
@@ -13423,7 +13457,7 @@ AcDbText
   0
 LINE
   5
-1CD
+1CE
 330
 17
 100
@@ -13447,7 +13481,7 @@ AcDbLine
   0
 TEXT
   5
-1CE
+1CF
 330
 17
 100
@@ -13487,30 +13521,6 @@ AcDbText
   0
 LINE
   5
-1CF
-330
-17
-100
-AcDbEntity
-  8
-Рамка
-100
-AcDbLine
- 10
-8.0
- 20
-172.0
- 30
-0.0
- 11
-8.0
- 21
-292.0
- 31
-0.0
-  0
-LINE
-  5
 1D0
 330
 17
@@ -13521,13 +13531,13 @@ AcDbEntity
 100
 AcDbLine
  10
-13.0
+8.0
  20
 172.0
  30
 0.0
  11
-13.0
+8.0
  21
 292.0
  31
@@ -13545,6 +13555,30 @@ AcDbEntity
 100
 AcDbLine
  10
+13.0
+ 20
+172.0
+ 30
+0.0
+ 11
+13.0
+ 21
+292.0
+ 31
+0.0
+  0
+LINE
+  5
+1D2
+330
+17
+100
+AcDbEntity
+  8
+Рамка
+100
+AcDbLine
+ 10
 8.0
  20
 172.0
@@ -13559,7 +13593,7 @@ AcDbLine
   0
 LINE
   5
-1D2
+1D3
 330
 17
 100
@@ -13583,7 +13617,7 @@ AcDbLine
   0
 LINE
   5
-1D3
+1D4
 330
 17
 100
@@ -13607,7 +13641,7 @@ AcDbLine
   0
 TEXT
   5
-1D4
+1D5
 330
 17
 100
@@ -13647,7 +13681,7 @@ AcDbText
   0
 TEXT
   5
-1D5
+1D6
 330
 17
 100
@@ -13687,7 +13721,7 @@ AcDbText
   0
 LWPOLYLINE
   5
-1D6
+1D7
 330
 17
 100
@@ -13715,7 +13749,7 @@ AcDbPolyline
   0
 TEXT
   5
-1D7
+1D8
 330
 17
 100
@@ -13749,7 +13783,7 @@ AcDbText
   0
 TEXT
   5
-1D8
+1D9
 330
 17
 100
@@ -14871,7 +14905,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-1DB
+1DC
   0
 DICTIONARYVAR
   5
@@ -14883,7 +14917,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-10-15T16:50:03.303290+00:00
+1.4.4 @ 2026-10-15T18:07:47.419941+00:00
   0
 VISUALSTYLE
   5
@@ -15587,7 +15621,7 @@ X-Ray
   0
 DICTIONARYVAR
   5
-1DB
+1DC
 330
 2D
 100
@@ -15595,7 +15629,7 @@ DictionaryVariables
 280
 0
   1
-1.4.4 @ 2026-10-15T16:50:03.324031+00:00
+1.4.4 @ 2026-10-15T18:07:47.441761+00:00
   0
 ENDSEC
   0
