@@ -63,17 +63,24 @@ SQ = "□"
 
 
 # ---------------------------------------------------------------- помощники
-def mk(ox, oy, rot=0):
+def mk(ox, oy, rot=0, mirror=False):
     """Функции рисования в локальной системе вида с началом (ox, oy),
-    повёрнутой на rot градусов (0 или 90) против часовой стрелки."""
+    повёрнутой на rot градусов (кратно 90) против часовой стрелки;
+    mirror=True — предварительно отразить относительно оси X."""
     ca, sa = round(math.cos(math.radians(rot))), round(math.sin(math.radians(rot)))
+    m = -1 if mirror else 1
 
     def P(x, y):
+        y *= m
         return (ox + x * ca - y * sa, oy + x * sa + y * ca)
+
+    def A(a):
+        """Угол направления из локальной системы в систему листа."""
+        return (m * a + rot) % 360
 
     def nrot(a):
         """Направление текста/размера без перевёрнутых надписей."""
-        a = (a + rot) % 360
+        a = A(a)
         return a - 180 if 90 < a <= 270 else a
 
     def line(x1, y1, x2, y2, layer="Основная"):
@@ -86,7 +93,9 @@ def mk(ox, oy, rot=0):
         msp.add_circle(P(x, y), r, dxfattribs={"layer": layer})
 
     def arc(x, y, r, a1, a2, layer="Основная"):
-        msp.add_arc(P(x, y), r, a1 + rot, a2 + rot, dxfattribs={"layer": layer})
+        if mirror:
+            a1, a2 = a2, a1
+        msp.add_arc(P(x, y), r, A(a1), A(a2), dxfattribs={"layer": layer})
 
     def hatch(pts, angle=45, spacing=2.0):
         h = msp.add_hatch(dxfattribs={"layer": "Штриховка"})
@@ -94,19 +103,19 @@ def mk(ox, oy, rot=0):
         h.paths.add_polyline_path([P(*p) for p in pts], is_closed=True)
 
     def dim_lin(p1, p2, base, angle=0, text="<>"):
-        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=(angle + rot) % 180,
+        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=A(angle) % 180,
                                text=text, dimstyle="ГОСТ", dxfattribs={"layer": "Размеры"})
         d.render()
 
     def dim_dia(cx, cy, r, ang, text="<>", loc=None):
-        kw = {"location": P(*loc)} if loc else {"angle": ang + rot}
+        kw = {"location": P(*loc)} if loc else {"angle": A(ang)}
         d = msp.add_diameter_dim(center=P(cx, cy), radius=r, text=text, **kw,
                                  dimstyle="ГОСТ", override={"dimtmove": 1},
                                  dxfattribs={"layer": "Размеры"})
         d.render()
 
     def dim_rad(cx, cy, r, ang, text="<>"):
-        d = msp.add_radius_dim(center=P(cx, cy), radius=r, angle=ang + rot, text=text,
+        d = msp.add_radius_dim(center=P(cx, cy), radius=r, angle=A(ang), text=text,
                                dimstyle="ГОСТ", override={"dimtmove": 1},
                                dxfattribs={"layer": "Размеры"})
         d.render()
@@ -155,9 +164,9 @@ LUG_TOP = LUG_ARC + LUG_R           # 51
 
 # ================================================================ ГЛАВНЫЙ ВИД
 # (соединение половины вида и половины фронтального разреза)
-# ось детали вертикальна: фланец внизу, вид слева от оси, разрез справа
-MX, MY = 112.0, 177.0
-P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY, 90)
+# ось детали вертикальна: фланец сверху, вид слева от оси, разрез справа
+MX, MY = 112.0, 143.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY, 270, mirror=True)
 
 # --- верхняя половина: вид
 poly([(0, 0), (0, LUG_TOP), (T_FL, LUG_TOP), (T_FL, R_OUT),
@@ -229,11 +238,11 @@ dim_lin((L, SLOT_H), (L, -SLOT_H), (L + 7, 0), angle=90)                # 8
 dim_lin((L - CH_OUT, R_OUT), (L - CH_OUT, -R_OUT), (L + 14, 0), angle=90,
         text=DIA + "60")                                                  # Ø60
 dim_lin((0, yc + M12_R), (0, yc - M12_R), (-7, 0), angle=90, text="M12")
-text(-12.5, yc - 4, "2 отв.", rot=90, align=TextEntityAlignment.MIDDLE_CENTER)
+text(-8, -25, "2 отв.", rot=270, align=TextEntityAlignment.LEFT)
 
-# ================================================================ ВИД СВЕРХУ
-# вид сверху — по ГОСТ 2.305 располагается под главным видом
-SX, SY = 112.0, 108.0
+# ================================================================ ВИД СНИЗУ
+# вид снизу — по ГОСТ 2.305 располагается над главным видом
+SX, SY = 112.0, 210.0
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(SX, SY, 90)
 
 circle(0, 0, R_OUT)
