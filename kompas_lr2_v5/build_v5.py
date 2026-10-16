@@ -260,8 +260,23 @@ for s in (1, -1):
 
 # --- размеры вида сверху
 dim_lin((-FLAT, FLAT_Y), (FLAT, FLAT_Y), (0, R_HEAD + 8))                     # 40
-dim_dia(0, 0, R_SHAFT, 0, text=DIA + "50", loc=(-38, 26))
-dim_dia(0, 0, HOLE6_Y, 0, text=DIA + "40", loc=(36, -30))
+def dia_full(r, ang, label, ext=15.0):
+    """Диаметр с размерной линией через центр и двумя стрелками, надпись на продолжении."""
+    c, sn = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    line(-r * c, -r * sn, (r + ext) * c, (r + ext) * sn, "Размеры")
+    for k in (1, -1):
+        tx, ty = k * r * c, k * r * sn
+        bx, by = k * (r - 3) * c, k * (r - 3) * sn
+        h = msp.add_hatch(color=3, dxfattribs={"layer": "Размеры"})
+        h.paths.add_polyline_path([P(tx, ty), P(bx - 0.5 * sn, by + 0.5 * c),
+                                   P(bx + 0.5 * sn, by - 0.5 * c)], is_closed=True)
+    m = r + ext / 2
+    text(m * c - 1 * sn, m * sn + 1 * c, label, rot=ang,
+         align=TextEntityAlignment.BOTTOM_CENTER)
+
+
+dia_full(R_SHAFT, 146, DIA + "50", ext=22)
+dia_full(HOLE6_Y, 210, DIA + "40", ext=30)
 dim_dia(0, HOLE6_Y, HOLE6_R, 0, text=DIA + "6 2 отв.", loc=(30, 44))
 dim_dia(HOLE10_Z, 0, HOLE10_R, 0, text=DIA + "10 2 отв.", loc=(44, -14))
 

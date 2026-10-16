@@ -110,7 +110,7 @@ def mk(ox, oy, rot=0, mirror=False):
     def dim_dia(cx, cy, r, ang, text="<>", loc=None):
         kw = {"location": P(*loc)} if loc else {"angle": A(ang)}
         d = msp.add_diameter_dim(center=P(cx, cy), radius=r, text=text, **kw,
-                                 dimstyle="ГОСТ", override={"dimtmove": 1},
+                                 dimstyle="ГОСТ", override={"dimtmove": 1, "dimtofl": 1},
                                  dxfattribs={"layer": "Размеры"})
         d.render()
 
@@ -198,7 +198,6 @@ line(X_FL, ym + M6_RMIN, X_FL, ym + M6_R)                      # ступень�
 # осевые
 line(-5, 0, L + 5, 0, "Осевая")
 line(-4, yh, H10_DEPTH + CONE + 3, yh, "Осевая")
-line(-4, H10_PCD_R, H10_DEPTH + 5, H10_PCD_R, "Осевая")
 line(X_FL - 4, ym, L + 4, ym, "Осевая")
 line(X_FL - 4, M6_PCD_R, L + 4, M6_PCD_R, "Осевая")
 
@@ -210,20 +209,19 @@ dim_lin((0, R_BODY - CH_BODY), (CH_BODY, R_BODY), (-12, R_BODY + 8),
 dim_lin((CH_BODY, R_BODY), (CH_BODY, -R_BODY), (-17, 0), angle=90, text=DIA + "50")
 dim_lin((0, yh + H10_R), (0, yh - H10_R), (-8, 0), angle=90, text=DIA + "10")
 text(-11.5, yh - 9, "4 отв.", rot=270, align=TextEntityAlignment.LEFT)
-dim_lin((0, -FL_H), (H10_DEPTH, yh - H10_R), (0, -FL_H - 8))                  # 15
+dim_lin((0, -(R_BODY - CH_BODY)), (H10_DEPTH, yh - H10_R), (0, -FL_H - 8))     # 15
 dim_lin((X_FL - CH_BORE, -R_BORE), (X_FL, -(R_BORE + CH_BORE)), (X_FL - 14, -FL_H - 8),
         text="2×45°")
 dim_lin((L - M6_CH, ym - M6_R), (L, ym - M6_R - M6_CH), (L + 10, -FL_H - 16),
         text="1,5×45°")
 text(L - 13, -FL_H - 21.5, "5 фасок", align=TextEntityAlignment.LEFT)
-# Ø14 — полуразмер
-XD = L + 8
-line(L, -R_BORE, XD + 2, -R_BORE, "Размеры")
+# Ø14 — полуразмер внутри разреза: размерная линия заходит за ось, стрелка на стенке отверстия
+XD = 30.0
 line(XD, 6, XD, -R_BORE, "Размеры")
 h = msp.add_hatch(color=3, dxfattribs={"layer": "Размеры"})
 h.paths.add_polyline_path([P(XD, -R_BORE), P(XD - 0.5, -R_BORE + 3), P(XD + 0.5, -R_BORE + 3)],
                           is_closed=True)
-text(XD - 1, -4, DIA + "14", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
+text(XD + 1, 1, DIA + "14", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
 
 # ================================================================ ВИД СВЕРХУ
 # вид сверху (на фланец) — по ГОСТ 2.305 располагается под главным видом
@@ -266,9 +264,24 @@ line(0, -FL_H - 4, 0, FL_H + 4, "Осевая")
 dim_lin((-FL_H, FL_H - FL_R), (-FL_H, -(FL_H - FL_R)), (-FL_H - 8, 0), angle=90,
         text=SQ + "80")
 dim_rad(FL_H - FL_R, -(FL_H - FL_R), FL_R, 315, text="R10")
-dim_dia(0, 0, M6_PCD_R, 0, text=DIA + "65", loc=(-30, -52))
-dim_dia(0, 0, R_REC, 0, text=DIA + "30", loc=(20, 48))
-dim_dia(0, 0, H10_PCD_R, 0, text=DIA + "35", loc=(-38, 24))
+def dia_full(r, ang, label, ext=15.0):
+    """Диаметр с размерной линией через центр и двумя стрелками, надпись на продолжении."""
+    c, sn = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    line(-r * c, -r * sn, (r + ext) * c, (r + ext) * sn, "Размеры")
+    for k in (1, -1):
+        tx, ty = k * r * c, k * r * sn
+        bx, by = k * (r - 3) * c, k * (r - 3) * sn
+        h = msp.add_hatch(color=3, dxfattribs={"layer": "Размеры"})
+        h.paths.add_polyline_path([P(tx, ty), P(bx - 0.5 * sn, by + 0.5 * c),
+                                   P(bx + 0.5 * sn, by - 0.5 * c)], is_closed=True)
+    m = r + ext / 2
+    text(m * c - 1 * sn, m * sn + 1 * c, label, rot=ang,
+         align=TextEntityAlignment.BOTTOM_CENTER)
+
+
+dia_full(M6_PCD_R, -120, DIA + "65")
+dia_full(R_REC, 110, DIA + "30", ext=40)
+dia_full(H10_PCD_R, 148, DIA + "35", ext=30)
 dim_dia(M6_PCD_R, 0, M6_R, 0, text="M6 4 отв.", loc=(44, 30))
 
 # ================================================================ РАМКА А4 И ОСНОВНАЯ НАДПИСЬ
