@@ -205,6 +205,10 @@ line(HCM, yc + M12_RMIN, M12_DRILL, yc + M12_RMIN)      # внутр. Ø рез�
 line(HCM, yc - M12_RMIN, M12_DRILL, yc - M12_RMIN)
 line(M12_DRILL, yc + M12_RMIN, M12_DRILL + CONE, yc)    # конус сверла
 line(M12_DRILL, yc - M12_RMIN, M12_DRILL + CONE, yc)
+line(0, yc + M12_R + M12_CH, 0, yc - M12_R - M12_CH)          # кромка отверстия на торце
+line(M12_DRILL, yc + M12_RMIN, M12_DRILL, yc - M12_RMIN)      # переход в конус
+line(0, -(LUG_C - R_LUG_HOLE), 0, -(LUG_C + R_LUG_HOLE))      # кромки отверстия Ø10
+line(T_FL, -(LUG_C - R_LUG_HOLE), T_FL, -(LUG_C + R_LUG_HOLE))
 line(M12_CH, yc + M12_R, M12_THR, yc + M12_R, "Тонкая")  # наружн. Ø резьбы
 line(M12_CH, yc - M12_R, M12_THR, yc - M12_R, "Тонкая")
 line(M12_THR, yc + M12_R, M12_THR, yc - M12_R)          # граница резьбы

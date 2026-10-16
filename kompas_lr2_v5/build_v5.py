@@ -193,6 +193,8 @@ line(L - HCM, yc + HOLE6_R, L - HOLE6_DEPTH, yc + HOLE6_R)
 line(L - HCM, yc - HOLE6_R, L - HOLE6_DEPTH, yc - HOLE6_R)
 line(L - HOLE6_DEPTH, yc + HOLE6_R, L - HOLE6_DEPTH - CONE, yc)
 line(L - HOLE6_DEPTH, yc - HOLE6_R, L - HOLE6_DEPTH - CONE, yc)
+line(L, yc + HOLE6_R + HOLE6_CH, L, yc - HOLE6_R - HOLE6_CH)   # кромка отверстия на торце
+line(L - HOLE6_DEPTH, yc + HOLE6_R, L - HOLE6_DEPTH, yc - HOLE6_R)  # переход в конус
 # невидимое отверстие Ø10 за секущей плоскостью
 line(L_BORE_A, -HOLE10_R, L_HEAD, -HOLE10_R, "Штриховая")
 # штриховка

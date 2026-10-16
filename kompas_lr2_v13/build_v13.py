@@ -194,6 +194,8 @@ line(HCM, yc + HOLE_RMIN, HOLE_DEPTH, yc + HOLE_RMIN)
 line(HCM, yc - HOLE_RMIN, HOLE_DEPTH, yc - HOLE_RMIN)
 line(HOLE_DEPTH, yc + HOLE_RMIN, HOLE_DEPTH + CONE, yc)
 line(HOLE_DEPTH, yc - HOLE_RMIN, HOLE_DEPTH + CONE, yc)
+line(0, yc + HOLE_R + HOLE_CH, 0, yc - HOLE_R - HOLE_CH)       # кромка отверстия на торце
+line(HOLE_DEPTH, yc + HOLE_RMIN, HOLE_DEPTH, yc - HOLE_RMIN)   # переход в конус
 line(HOLE_CH, yc + HOLE_R, HOLE_THR, yc + HOLE_R, "Тонкая")
 line(HOLE_CH, yc - HOLE_R, HOLE_THR, yc - HOLE_R, "Тонкая")
 line(HOLE_THR, yc + HOLE_R, HOLE_THR, yc - HOLE_R)
