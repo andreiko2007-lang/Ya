@@ -3,7 +3,7 @@
 Генерирует DXF (AutoCAD 2010), который открывается в КОМПАС-3D через
 «Файл → Открыть» (тип файла DXF). Масштаб 1:1, формат А4 (книжный).
 
-Запуск:  python build_lr1.py 1   и   python build_lr1.py 2   (нужен пакет ezdxf)
+Запуск:  python build_lr1.py   (нужен пакет ezdxf)
 """
 import math
 import sys
@@ -11,8 +11,7 @@ import sys
 import ezdxf
 from ezdxf.enums import TextEntityAlignment
 
-SHEET = int(sys.argv[1]) if len(sys.argv) > 1 else 1   # номер листа: 1 — примитивы, 2 — типовая деталь
-OUT = f"LR1_list{SHEET}.dxf"
+OUT = sys.argv[1] if len(sys.argv) > 1 else "LR1_Vasilieva.dxf"
 
 doc = ezdxf.new("R2010", setup=True)
 doc.header["$INSUNITS"] = 4  # мм
@@ -162,7 +161,7 @@ def arrow(tx, ty, dx, dy):
                                P(bx + 0.5 * dy, by - 0.5 * dx)], is_closed=True)
 
 
-if SHEET == 1:
+if True:   # --- примитивы (верхняя часть листа)
     P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
     # --- 2. Отрезки AB, AC ⟂ AB, BM ∥ AC; скругление R10 в точке A, фаска 4×45° в точке B
     AX, AY, BX = 30.0, 265.0, 70.0
@@ -180,7 +179,7 @@ if SHEET == 1:
     dim_lin((BX - CHB, AY), (BX, AY - CHB), (0, AY + 8), text="4×45°")
 
     # --- 3. Концентрические окружности
-    CX, CY = 150.0, 250.0
+    CX, CY = 178.0, 255.0
     circle(CX, CY, 20.0)
     arc(CX, CY, 15.0, 0, 360, "Осевая")
     circle(CX, CY, 10.0)
@@ -189,7 +188,7 @@ if SHEET == 1:
 
     # --- 5. Сопряжение: окружности R20 и R10, межцентровое 30,
     #        верхняя внешняя касательная и скругление R5 снизу
-    OX, OY = 80.0, 165.0
+    OX, OY = 103.0, 252.0
     R1, R2, D, R3 = 20.0, 10.0, 30.0, 5.0
     circle(OX, OY, R1, "Тонкая")                          # исходные окружности
     circle(OX + D, OY, R2, "Тонкая")
@@ -216,15 +215,14 @@ if SHEET == 1:
     line(OX + fx - 3, OY + fy, OX + fx + 3, OY + fy, "Осевая")
     line(OX + fx, OY + fy - 3, OX + fx, OY + fy + 3, "Осевая")
     dim_lin((OX, OY), (OX + D, OY), (0, OY + R1 + 6))                       # 30
-    rad_leader(OX, OY, R1, 135, "R20", ext=12)
+    rad_leader(OX, OY, R1, 250, "R20", ext=10)
     rad_leader(OX + D, OY, R2, 45, "R10", ext=12)
     rad_leader(OX + fx, OY + fy, R3, -60, "R5", ext=12)
 
-else:
+if True:   # --- типовая деталь (нижняя часть листа)
     # --- 6. Типовая деталь (втулка), масштаб 2:1: размеры проставлены в натуральную величину
     K = 2.0
-    ds.dxf.dimlfac = 1 / K
-    MX, MY = 72.0, 185.0
+    MX, MY = 72.0, 148.0
     P0, line0, poly0, circle0, arc0, hatch0, dim_lin0, dim_dia0, dim_rad0, text0 = mk(MX, MY)
 
     def S(*pts):
@@ -232,6 +230,16 @@ else:
 
     P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = (
         P0, line0, poly0, circle0, arc0, hatch0, dim_lin0, dim_dia0, dim_rad0, text0)
+
+    def dim_lin(p1, p2, base, angle=0, text="<>"):
+        """Размер детали, начерченной в масштабе 2:1: значение — в натуральную величину."""
+        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=angle, text=text,
+                               dimstyle="ГОСТ", override={"dimlfac": 1 / K},
+                               dxfattribs={"layer": "Размеры"})
+        d.render()
+
+    text(40.0, 72.0, "М 2:1", h=5, layer="Обозначения",
+         align=TextEntityAlignment.MIDDLE_CENTER)
     L, T_FL = 40.0, 10.0
     R_FL, R_B, R_IN, CH = 30.0, 25.0, 15.0, 2.5
     # верхняя половина: вид
@@ -297,8 +305,8 @@ tb(136, 16.2, "Лист"); tb(156, 16.2, "Листов")
 tb(17.6, 26.2, "Васильева К. М."); tb(17.6, 21.2, "Кулькова В. В.")
 tb(100, 27.5, "Лаб. раб. №1", h=7, align=C)
 tb(160, 7.5, "ВФ МЭИ гр. ИВТ-2-26", h=3.5, align=C)
-tb(176, 27.5, "1:1" if SHEET == 1 else "2:1", h=5, align=C)
-tb(149, 17.5, str(SHEET), h=3.5, align=C); tb(180, 17.5, "2", h=3.5, align=C)
+tb(176, 27.5, "1:1", h=5, align=C)
+tb(180, 17.5, "1", h=3.5, align=C)
 
 # дополнительные графы 19–23 и 24–25 на поле подшивки (ГОСТ 2.104)
 CC = TextEntityAlignment.MIDDLE_CENTER
