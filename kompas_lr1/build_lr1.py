@@ -176,7 +176,7 @@ if True:   # --- примитивы (верхняя часть листа)
                     ("C", AX - 6, AY - SEG), ("M", BX + 2, AY - SEG)):
         text(x, y, s, h=5, layer="Обозначения")
     rad_leader(AX + RF, AY - RF, RF, 135, "R10", ext=12)
-    dim_lin((BX - CHB, AY), (BX, AY - CHB), (0, AY + 8), text="4×45°")
+    dim_lin((BX - CHB, AY), (BX, AY - CHB), (BX + 9, 0), angle=90, text="4×45°")
 
     # --- 3. Концентрические окружности
     CX, CY = 178.0, 255.0
