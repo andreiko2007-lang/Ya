@@ -134,21 +134,8 @@ def mk(ox, oy, rot=0, mirror=False):
 
 
 
-# ================================================================ СОДЕРЖИМОЕ ЛИСТА
-def rad_leader(cx, cy, r, ang, label, ext=10.0):
-    """Радиус: линия от центра, стрелка на дуге, надпись на полке-продолжении."""
-    c, sn = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-    line(cx, cy, cx + (r + ext) * c, cy + (r + ext) * sn, "Размеры")
-    tx, ty = cx + r * c, cy + r * sn
-    bx, by = cx + (r - 3) * c, cy + (r - 3) * sn
-    if r < 4:
-        bx, by = cx + (r + 3) * c, cy + (r + 3) * sn
-    h = msp.add_hatch(color=3, dxfattribs={"layer": "Размеры"})
-    h.paths.add_polyline_path([P(tx, ty), P(bx - 0.5 * sn, by + 0.5 * c),
-                               P(bx + 0.5 * sn, by - 0.5 * c)], is_closed=True)
-    m = r + ext * 0.6
-    text(cx + m * c - 1 * sn, cy + m * sn + 1 * c, label, rot=ang,
-         align=TextEntityAlignment.BOTTOM_CENTER)
+# ================================================================ СОДЕРЖИМОЕ ЛИСТА (по образцу рис. 2.7)
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
 
 
 def arrow(tx, ty, dx, dy):
@@ -161,110 +148,140 @@ def arrow(tx, ty, dx, dy):
                                P(bx + 0.5 * dy, by - 0.5 * dx)], is_closed=True)
 
 
-if True:   # --- примитивы (верхняя часть листа)
-    P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
-    # --- 2. Отрезки AB, AC ⟂ AB, BM ∥ AC; скругление R10 в точке A, фаска 4×45° в точке B
-    AX, AY, BX = 30.0, 265.0, 70.0
-    SEG = 30.0                      # длина отрезков AC и BM
-    RF, CHB = 10.0, 4.0
-    line(AX + RF, AY, BX - CHB, AY)                       # AB (после скругления и фаски)
-    arc(AX + RF, AY - RF, RF, 90, 180)                    # скругление R10
-    line(AX, AY - RF, AX, AY - SEG)                       # AC
-    line(BX - CHB, AY, BX, AY - CHB)                      # фаска 4×45°
-    line(BX, AY - CHB, BX, AY - SEG)                      # BM
-    for s, x, y in (("A", AX + 5, AY + 3), ("B", BX + 2, AY + 2),
-                    ("C", AX - 6, AY - SEG), ("M", BX + 2, AY - SEG)):
-        text(x, y, s, h=5, layer="Обозначения")
-    rad_leader(AX + RF, AY - RF, RF, 135, "R10", ext=12)
-    dim_lin((BX - CHB, AY), (BX, AY - CHB), (BX + 9, 0), angle=90, text="4×45°")
+def rad_shelf(cx, cy, r, ang, label, side, from_center=True, knee=6.0, shelf=14.0):
+    """Радиус с выноской на полку: side = -1 полка влево, +1 вправо."""
+    c, s = math.cos(math.radians(ang)), math.sin(math.radians(ang))
+    kx, ky = cx + (r + knee) * c, cy + (r + knee) * s
+    ax, ay = cx + r * c, cy + r * s
+    if from_center:                      # линия от центра, стрелка на дуге наружу
+        line(cx, cy, kx, ky, "Размеры")
+        arrow(ax, ay, c, s)
+    else:                                # стрелка снаружи к дуге (к центру)
+        line(cx + (r - 5) * c, cy + (r - 5) * s, kx, ky, "Размеры")
+        arrow(ax, ay, -c, -s)
+    ex = kx + side * shelf
+    line(kx, ky, ex, ky, "Размеры")
+    text((kx + ex) / 2, ky + 1, label, align=TextEntityAlignment.BOTTOM_CENTER)
 
-    # --- 3. Концентрические окружности
-    CX, CY = 178.0, 255.0
-    circle(CX, CY, 20.0)
-    arc(CX, CY, 15.0, 0, 360, "Осевая")
-    circle(CX, CY, 10.0)
-    line(CX - 25, CY, CX + 25, CY, "Осевая")
-    line(CX, CY - 25, CX, CY + 25, "Осевая")
 
-    # --- 5. Сопряжение: окружности R20 и R10, межцентровое 30,
-    #        верхняя внешняя касательная и скругление R5 снизу
-    OX, OY = 103.0, 252.0
-    R1, R2, D, R3 = 20.0, 10.0, 30.0, 5.0
-    circle(OX, OY, R1, "Тонкая")                          # исходные окружности
-    circle(OX + D, OY, R2, "Тонкая")
-    phi = math.asin((R1 - R2) / D)
-    nx, ny = math.sin(phi), math.cos(phi)
-    t1 = (OX + R1 * nx, OY + R1 * ny)
-    t2 = (OX + D + R2 * nx, OY + R2 * ny)
-    line(*t1, *t2)                                        # касательная
-    fx = (( R1 + R3) ** 2 - (R2 + R3) ** 2 + D ** 2) / (2 * D)
-    fy = -math.sqrt((R1 + R3) ** 2 - fx ** 2)
-    f1 = (fx * R1 / (R1 + R3), fy * R1 / (R1 + R3))
-    f2 = (D + (fx - D) * R2 / (R2 + R3), fy * R2 / (R2 + R3))
-    a_t = math.degrees(math.atan2(ny, nx))
-    a_f1 = math.degrees(math.atan2(f1[1], f1[0]))
-    a_f2 = math.degrees(math.atan2(f2[1], f2[0] - D))
-    arc(OX, OY, R1, a_t, a_f1)                            # контур по R20
-    arc(OX + D, OY, R2, a_f2, a_t)                        # контур по R10
-    arc(OX + fx, OY + fy, R3,
-        math.degrees(math.atan2(f2[1] - fy, f2[0] - fx)),
-        math.degrees(math.atan2(f1[1] - fy, f1[0] - fx)))  # скругление R5
-    line(OX - R1 - 5, OY, OX + D + R2 + 5, OY, "Осевая")
-    line(OX, OY - R1 - 5, OX, OY + R1 + 8, "Осевая")
-    line(OX + D, OY - R2 - 5, OX + D, OY + R1 + 8, "Осевая")
-    line(OX + fx - 3, OY + fy, OX + fx + 3, OY + fy, "Осевая")
-    line(OX + fx, OY + fy - 3, OX + fx, OY + fy + 3, "Осевая")
-    dim_lin((OX, OY), (OX + D, OY), (0, OY + R1 + 6))                       # 30
-    rad_leader(OX, OY, R1, 250, "R20", ext=10)
-    rad_leader(OX + D, OY, R2, 45, "R10", ext=12)
-    rad_leader(OX + fx, OY + fy, R3, -60, "R5", ext=12)
+def chamfer_dim(x1, x2, y_from1, y_from2, y_dim, label, shelf=16.0):
+    """Размер фаски: выносные линии вверх/вниз, стрелки снаружи, надпись на полке справа."""
+    line(x1, y_from1, x1, y_dim + (2 if y_dim > y_from1 else -2), "Размеры")
+    line(x2, y_from2, x2, y_dim + (2 if y_dim > y_from2 else -2), "Размеры")
+    line(x1 - 7, y_dim, x2 + shelf, y_dim, "Размеры")
+    arrow(x1, y_dim, 1, 0)
+    arrow(x2, y_dim, -1, 0)
+    text(x2 + 2, y_dim + 1, label)
 
-if True:   # --- типовая деталь (нижняя часть листа)
-    # --- 6. Типовая деталь (втулка), масштаб 2:1: размеры проставлены в натуральную величину
-    K = 2.0
-    MX, MY = 72.0, 148.0
-    P0, line0, poly0, circle0, arc0, hatch0, dim_lin0, dim_dia0, dim_rad0, text0 = mk(MX, MY)
 
-    def S(*pts):
-        return [(x * K, y * K) for x, y in pts]
+# --- 2. Отрезки AB, AC ⟂ AB, BM ∥ AC; скругление R10 в точке A, фаска 4×45° в точке B
+AX, AY = 36.0, 258.0
+BX = AX + 40.0                        # AB = 40
+SEG = 26.0                            # длина AC и BM (по образцу)
+RF, CHB = 10.0, 4.0
+line(AX + RF, AY, BX - CHB, AY)
+arc(AX + RF, AY - RF, RF, 90, 180)
+line(AX, AY - RF, AX, AY - SEG)
+line(BX - CHB, AY, BX, AY - CHB)
+line(BX, AY - CHB, BX, AY - SEG)
+text(AX + 1, AY + 5, "A", h=5, layer="Обозначения")
+text(BX + 1.5, AY + 1, "B", h=5, layer="Обозначения")
+text(AX - 6, AY - SEG, "C", h=5, layer="Обозначения")
+text(BX + 3, AY - SEG, "M", h=5, layer="Обозначения")
+rad_shelf(AX + RF, AY - RF, RF, 135, "R10", -1, from_center=False, knee=4.0, shelf=12.0)
+chamfer_dim(BX - CHB, BX, AY, AY - CHB, AY + 13, "4×45°")
 
-    P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = (
-        P0, line0, poly0, circle0, arc0, hatch0, dim_lin0, dim_dia0, dim_rad0, text0)
+# --- 3. Концентрические окружности (средняя — осевой линией)
+CX, CY = 181.0, 246.0
+circle(CX, CY, 20.0)
+circle(CX, CY, 15.0, "Осевая")
+circle(CX, CY, 10.0)
 
-    def dim_lin(p1, p2, base, angle=0, text="<>"):
-        """Размер детали, начерченной в масштабе 2:1: значение — в натуральную величину."""
-        d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=angle, text=text,
-                               dimstyle="ГОСТ", override={"dimlfac": 1 / K},
-                               dxfattribs={"layer": "Размеры"})
-        d.render()
+# --- 5. Сопряжение: окружности R20 и R10 (межцентровое 30), касательная и скругление R5
+OX, OY = 112.0, 248.0
+R1, R2, D, R3 = 20.0, 10.0, 30.0, 5.0
+phi = math.asin((R1 - R2) / D)
+nx, ny = math.sin(phi), math.cos(phi)
+t1 = (OX + R1 * nx, OY + R1 * ny)
+t2 = (OX + D + R2 * nx, OY + R2 * ny)
+line(*t1, *t2)
+fx = ((R1 + R3) ** 2 - (R2 + R3) ** 2 + D ** 2) / (2 * D)
+fy = -math.sqrt((R1 + R3) ** 2 - fx ** 2)
+f1 = (fx * R1 / (R1 + R3), fy * R1 / (R1 + R3))
+f2 = (D + (fx - D) * R2 / (R2 + R3), fy * R2 / (R2 + R3))
+a_t = math.degrees(math.atan2(ny, nx))
+arc(OX, OY, R1, a_t, math.degrees(math.atan2(f1[1], f1[0])))
+arc(OX + D, OY, R2, math.degrees(math.atan2(f2[1], f2[0] - D)), a_t)
+arc(OX + fx, OY + fy, R3,
+    math.degrees(math.atan2(f2[1] - fy, f2[0] - fx)),
+    math.degrees(math.atan2(f1[1] - fy, f1[0] - fx)))
+line(OX - R1 - 4, OY, OX + D + R2 + 4, OY, "Осевая")
+line(OX, OY - R1 - 4, OX, OY, "Осевая")
+line(OX + D, OY - R2 - 2, OX + D, OY, "Осевая")
+# размер 30 между центрами
+YD = OY + R1 + 10
+line(OX, OY, OX, YD + 2, "Размеры")
+line(OX + D, OY, OX + D, YD + 2, "Размеры")
+line(OX, YD, OX + D, YD, "Размеры")
+arrow(OX, YD, -1, 0)
+arrow(OX + D, YD, 1, 0)
+text(OX + D / 2, YD + 1, "30", align=TextEntityAlignment.BOTTOM_CENTER)
+rad_shelf(OX, OY, R1, 105, "R20", -1, knee=5.0, shelf=11.0)
+rad_shelf(OX + D, OY, R2, 50, "R10", +1, knee=7.0, shelf=12.0)
+# R5: линия через центр скругления, стрелка на дуге, надпись вдоль линии
+a5 = 125.0
+c5, s5 = math.cos(math.radians(a5)), math.sin(math.radians(a5))
+gx, gy = OX + fx, OY + fy
+line(gx + R3 * c5, gy + R3 * s5, gx - 13 * c5, gy - 13 * s5, "Размеры")
+arrow(gx + R3 * c5, gy + R3 * s5, c5, s5)
+text(gx - 8 * c5 + 1.2 * s5, gy - 8 * s5 - 1.2 * c5, "R5", rot=a5,
+     align=TextEntityAlignment.BOTTOM_CENTER)
 
-    text(40.0, 72.0, "М 2:1", h=5, layer="Обозначения",
-         align=TextEntityAlignment.MIDDLE_CENTER)
-    L, T_FL = 40.0, 10.0
-    R_FL, R_B, R_IN, CH = 30.0, 25.0, 15.0, 2.5
-    # верхняя половина: вид
-    poly(S((0, 0), (0, R_FL), (T_FL, R_FL), (T_FL, R_B), (L, R_B), (L, 0)))
-    # нижняя половина: разрез
-    sec = S((0, -R_IN), (L - CH, -R_IN), (L, -(R_IN + CH)), (L, -R_B), (T_FL, -R_B),
-            (T_FL, -R_FL), (0, -R_FL))
-    poly(sec, closed=True)
-    hatch(sec)
-    line(*S((0, -R_IN))[0], *S((0, 0))[0])                         # кромка отверстия на торце
-    line(*S((L - CH, -R_IN))[0], *S((L - CH, 0))[0])               # кромка фаски
-    line(*S((L, -(R_IN + CH)))[0], *S((L, 0))[0])                  # кромка на торце
-    line(-5, 0, L * K + 5, 0, "Осевая")
-    # размеры (в натуральную величину)
-    dim_lin(S((0, R_FL))[0], S((0, -R_FL))[0], (-14, 0), angle=90, text=DIA + "60")
-    dim_lin(S((L, R_B))[0], S((L, -R_B))[0], (L * K + 14, 0), angle=90, text=DIA + "50")
-    dim_lin(S((T_FL, -R_B))[0], S((L, -R_B))[0], (0, -R_FL * K - 12))         # 30
-    dim_lin(S((0, -R_FL))[0], S((L, -R_B))[0], (0, -R_FL * K - 24))           # 40
-    dim_lin(S((L - CH, -R_IN))[0], S((L, -(R_IN + CH)))[0], (L * K + 14, -R_FL * K - 6),
-            text="2,5×45°")
-    # Ø30 — полуразмер
-    XD = 8.0
-    line(XD, 6, XD, -R_IN * K, "Размеры")
-    arrow(XD, -R_IN * K, 0, -1)
-    text(XD - 1, -R_IN * K / 2, DIA + "30", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
+# --- 6. Типовая деталь (втулка) — начерчена в масштабе 2:1, размеры в натуральную величину
+K = 2.0
+MX, MY = 64.0, 150.0
+P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(MX, MY)
+
+
+def S(x, y):
+    return (x * K, y * K)
+
+
+def dl(p1, p2, base, angle=0, txt="<>"):
+    d = msp.add_linear_dim(base=P(*base), p1=P(*p1), p2=P(*p2), angle=angle, text=txt,
+                           dimstyle="ГОСТ", override={"dimlfac": 1 / K},
+                           dxfattribs={"layer": "Размеры"})
+    d.render()
+
+
+L, T_FL = 40.0, 10.0
+R_FL, R_B, R_IN, CH = 30.0, 25.0, 15.0, 2.5
+# верхняя половина — вид (как на образце)
+poly([S(0, 0), S(0, R_FL), S(T_FL, R_FL), S(T_FL, R_B), S(L, R_B), S(L, 0)])
+line(*S(T_FL, R_B), *S(T_FL, 0))
+# нижняя половина — разрез
+sec = [S(0, -R_IN), S(L - CH, -R_IN), S(L, -(R_IN + CH)), S(L, -R_B), S(T_FL, -R_B),
+       S(T_FL, -R_FL), S(0, -R_FL)]
+poly(sec, closed=True)
+hatch(sec)
+line(*S(0, -R_IN), *S(0, 0))
+line(*S(L - CH, -R_IN), *S(L - CH, 0))
+line(-6, 0, L * K + 6, 0, "Осевая")
+# размеры
+dl(S(0, R_FL), S(0, -R_FL), (-18, 0), angle=90, txt=DIA + "60")
+dl(S(L, R_B), S(L, -R_B), (L * K + 14, 0), angle=90, txt=DIA + "50")
+dl(S(T_FL, -R_B), S(L, -R_B), (0, -R_FL * K - 12))        # 30
+dl(S(0, -R_FL), S(L, -R_B), (0, -R_FL * K - 24))          # 40
+# Ø30 — полуразмер снаружи слева
+XD = -8.0
+line(0, -R_IN * K, XD - 2, -R_IN * K, "Размеры")
+line(XD, 2, XD, -R_IN * K, "Размеры")
+arrow(XD, -R_IN * K, 0, -1)
+text(XD - 1, -R_IN * K / 2, DIA + "30", rot=90, align=TextEntityAlignment.BOTTOM_CENTER)
+# фаска 2,5×45° — выносные линии вниз, надпись на полке справа
+chamfer_dim(S(L - CH, 0)[0], S(L, 0)[0], S(0, -R_IN)[1], S(0, -(R_IN + CH))[1], -R_FL * K - 4, "2,5×45°")
+text(L * K / 2, R_FL * K + 6, "М 2:1", h=5, layer="Обозначения",
+     align=TextEntityAlignment.MIDDLE_CENTER)
 
 # ================================================================ РАМКА А4 И ОСНОВНАЯ НАДПИСЬ
 P, line, poly, circle, arc, hatch, dim_lin, dim_dia, dim_rad, text = mk(0, 0)
