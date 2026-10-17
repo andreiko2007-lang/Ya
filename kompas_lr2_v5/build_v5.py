@@ -93,6 +93,9 @@ def mk(ox, oy, rot=0, mirror=False):
         msp.add_circle(P(x, y), r, dxfattribs={"layer": layer})
 
     def arc(x, y, r, a1, a2, layer="Основная"):
+        if abs(a2 - a1) >= 360:                      # полная окружность
+            msp.add_circle(P(x, y), r, dxfattribs={"layer": layer})
+            return
         if mirror:
             a1, a2 = a2, a1
         msp.add_arc(P(x, y), r, A(a1), A(a2), dxfattribs={"layer": layer})
