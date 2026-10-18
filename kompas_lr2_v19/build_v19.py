@@ -19,7 +19,7 @@ doc.header["$LWDISPLAY"] = 1
 msp = doc.modelspace()
 
 # ---------------------------------------------------------------- стили
-doc.styles.new("GOST", dxfattribs={"font": "GOST type A.ttf", "width": 1.0, "oblique": 15})
+doc.styles.new("GOST", dxfattribs={"font": "GOST type A.ttf", "width": 0.8, "oblique": 15})
 doc.linetypes.add("AXIS", pattern=[25.0, 20.0, -3.0, 2.0, -3.0], description="Осевая __ . __")
 doc.linetypes.add("HID", pattern=[6.0, 4.0, -2.0], description="Штриховая -- -- --")
 
@@ -123,7 +123,7 @@ def mk(ox, oy, rot=0, mirror=False):
                                dxfattribs={"layer": "Размеры"})
         d.render()
 
-    def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0, width=1.0):
+    def text(x, y, s, h=3.5, layer="Размеры", align=TextEntityAlignment.LEFT, rot=0, width=0.8):
         rot_t = rot
         t = msp.add_text(s, height=h, rotation=nrot(rot_t),
                          dxfattribs={"layer": layer, "style": "GOST", "width": width})
@@ -330,8 +330,8 @@ for x1, y, x2 in [(65, 40, 185), (135, 35, 185), (135, 20, 185), (135, 15, 185),
                   (65, 15, 135)]:
     line(TX + x1, TY + y, TX + x2, TY + y, B)
 
-def tb(x, y, s, h=3.5, align=TextEntityAlignment.LEFT, width=0.75):
-    text(TX + x, TY + y, s, h=h, layer="Рамка_тонкая", align=align, width=width)
+def tb(x, y, s, h=2.5, align=TextEntityAlignment.LEFT):
+    text(TX + x, TY + y, s, h=h, layer="Рамка_тонкая", align=align, width=0.65)
 
 C = TextEntityAlignment.MIDDLE_CENTER
 
@@ -342,9 +342,9 @@ tb(0.6, 26.2, "Разраб."); tb(0.6, 21.2, "Пров."); tb(0.6, 16.2, "Т.к
 tb(0.6, 6.2, "Н.контр."); tb(0.6, 1.2, "Утв.")
 tb(142.5, 37.5, "Лит.", align=C); tb(158.5, 37.5, "Масса", align=C); tb(176, 37.5, "Масштаб", align=C)
 tb(136, 16.2, "Лист"); tb(156, 16.2, "Листов")
-tb(17.6, 26.2, "Шлейко И. Ю.", width=0.66); tb(17.6, 21.2, "Кулькова В. В.", width=0.66)
-tb(100, 27.5, "Лаб. раб. №2", h=10, align=C)
-tb(136.5, 4.5, "ВФ МЭИ", h=6, width=0.7); tb(157, 4.5, "гр. ИВТ-2-26", h=4, width=0.7)
+tb(17.6, 26.2, "Шлейко И. Ю."); tb(17.6, 21.2, "Кулькова В. В.")
+tb(100, 27.5, "Лаб. раб. №2", h=7, align=C)
+tb(160, 7.5, "ВФ МЭИ гр. ИВТ-2-26", h=3.5, align=C)
 tb(176, 27.5, "1:1", h=5, align=C); tb(180, 17.5, "1", h=3.5, align=C)
 
 # дополнительные графы 19–23 и 24–25 на поле подшивки (ГОСТ 2.104)
@@ -354,18 +354,18 @@ y = 5
 for hgt, cap in [(25, "Инв. № подл."), (35, "Подп. и дата"), (25, "Взам. инв. №"),
                  (25, "Инв. № дубл."), (35, "Подп. и дата")]:
     line(8, y + hgt, 20, y + hgt, B)
-    text(10.5, y + hgt / 2, cap, h=3.5, layer=T, align=CC, rot=90, width=0.75)
+    text(10.5, y + hgt / 2, cap, h=3, layer=T, align=CC, rot=90, width=0.7)
     y += hgt
 line(8, 172, 8, 292, B); line(13, 172, 13, 292, B)
 for yy in (172, 232, 292):
     line(8, yy, 20, yy, B)
-text(10.5, 262, "Перв. примен.", h=3.5, layer=T, align=CC, rot=90, width=0.75)
-text(10.5, 202, "Справ. №", h=3.5, layer=T, align=CC, rot=90, width=0.75)
+text(10.5, 262, "Перв. примен.", h=3, layer=T, align=CC, rot=90, width=0.7)
+text(10.5, 202, "Справ. №", h=3, layer=T, align=CC, rot=90, width=0.7)
 # графа 26 (обозначение документа, повернутое) в левом верхнем углу
 poly([(20, 278), (90, 278), (90, 292)], B)
 # надписи под рамкой
-text(96, 1, "Копировал", h=3.5, layer=T, width=0.8)
-text(166, 1, "Формат  А4", h=3.5, layer=T, width=0.8)
+text(96, 1, "Копировал", h=3, layer=T, width=0.8)
+text(166, 1, "Формат  А4", h=3, layer=T, width=0.8)
 
 doc.saveas(OUT)
 print("saved", OUT)
